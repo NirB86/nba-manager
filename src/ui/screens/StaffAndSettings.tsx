@@ -1,4 +1,5 @@
-import { fullName, type StaffRole } from '../../engine';
+import { useRef, useState } from 'react';
+import { fullName, validateLeague, type LeagueFile, type StaffRole } from '../../engine';
 import { exportSave, type Difficulty, type Role, type ScoutingDepth, type SimMode } from '../../storage/saves';
 import { useCareer } from '../career-context';
 import { Card, Segmented } from '../components';
@@ -93,6 +94,7 @@ export function Settings() {
           <Segmented<Difficulty> name="Owner patience" value={c.difficulty} onChange={(difficulty) => set({ difficulty })} options={[{ value: 'easy', label: 'Patient' }, { value: 'normal', label: 'Normal' }, { value: 'hard', label: 'Win now' }]} />
         </label>
       </Card>
+      <ImagesCard />
       <Card title="Save">
         <p className="muted">Saved automatically on this device. Export a copy to back it up or to continue on another device.</p>
         <div className="row-actions">
@@ -134,5 +136,68 @@ export function More() {
         </li>
       </ul>
     </>
+  );
+}
+
+/** Adds photos and logos from a newer league file to this career, matching by id. */
+function ImagesCard() {
+  const { save, update } = useCareer();
+  const input = useRef<HTMLInputElement>(null);
+  const [msg, setMsg] = useState<string | null>(null);
+  const withPhoto = save.league.players.filter((p) => p.photo).length;
+
+  const onFile = async (file: File | undefined) => {
+    if (!file) return;
+    try {
+      const data = JSON.parse(await file.text()) as LeagueFile;
+      const check = validateLeague(data);
+      if (!check.ok) throw new Error(check.errors[0]);
+      const photos = new Map(data.players.filter((p) => p.photo).map((p) => [p.id, p.photo]));
+      const teams = new Map(data.teams.map((t) => [t.id, t]));
+      let n = 0;
+      update((s) => ({
+        ...s,
+        league: {
+          ...s.league,
+          players: s.league.players.map((p) => {
+            const photo = photos.get(p.id);
+            if (!photo) return p;
+            n++;
+            return { ...p, photo };
+          }),
+          teams: s.league.teams.map((t) => {
+            const src = teams.get(t.id);
+            return src ? { ...t, logo: src.logo ?? t.logo, wordmark: src.wordmark ?? t.wordmark } : t;
+          }),
+        },
+      }));
+      setMsg(`Added ${n} player photos${[...teams.values()].some((t) => t.logo) ? ' and team logos' : ''}.`);
+    } catch (e) {
+      setMsg(`That file could not be used: ${e instanceof Error ? e.message : 'unknown error'}`);
+    }
+  };
+
+  return (
+    <Card title="Photos and logos">
+      <p className="muted">
+        {withPhoto ? `${withPhoto} players in this career have photos.` : 'This career has no player photos yet.'} Load a newer league file to add its photos and logos to this career. Your roster, results and stats stay as they are.
+      </p>
+      <div className="row-actions">
+        <button className="btn" type="button" onClick={() => input.current?.click()}>
+          Add photos from league file
+        </button>
+        <input
+          ref={input}
+          type="file"
+          accept=".json,application/json"
+          hidden
+          onChange={(e) => {
+            void onFile(e.target.files?.[0]);
+            e.target.value = '';
+          }}
+        />
+      </div>
+      {msg && <p className="small" style={{ marginTop: 10 }}>{msg}</p>}
+    </Card>
   );
 }
