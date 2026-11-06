@@ -1,0 +1,31 @@
+import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
+import { putSave, type SaveGame } from '../storage/saves';
+
+interface CareerCtx {
+  save: SaveGame;
+  /** Apply a change and persist it to the device. */
+  update: (fn: (save: SaveGame) => SaveGame) => void;
+}
+
+const Ctx = createContext<CareerCtx | null>(null);
+
+export function CareerProvider({ initial, children }: { initial: SaveGame; children: ReactNode }) {
+  const [save, setSave] = useState(initial);
+  const latest = useRef(initial);
+
+  const update = useCallback((fn: (s: SaveGame) => SaveGame) => {
+    const next = fn(latest.current);
+    latest.current = next;
+    setSave(next);
+    void putSave(next);
+  }, []);
+
+  const value = useMemo(() => ({ save, update }), [save, update]);
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+}
+
+export function useCareer(): CareerCtx {
+  const ctx = useContext(Ctx);
+  if (!ctx) throw new Error('useCareer outside CareerProvider');
+  return ctx;
+}
