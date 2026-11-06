@@ -242,7 +242,7 @@ for (const [old, cur] of [['NJN', 'BRK'], ['CHA', 'CHO'], ['NOH', 'NOP'], ['SEA'
   const t = brefToTeam.get(cur);
   if (t) brefToTeam.set(old, t);
 }
-for (let y = PREV - 10; y <= PREV; y++) {
+for (let y = PREV - 23; y <= PREV; y++) {
   const file = join(cacheDir, cacheName(`/draft/NBA_${y}.html`));
   if (!existsSync(file)) continue;
   for (const r of readTable(loadPage(file), 'stats')) {

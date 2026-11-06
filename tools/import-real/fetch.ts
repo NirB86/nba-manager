@@ -24,7 +24,8 @@ export function pagesFor(endYear: number): string[] {
   for (const t of REAL_TEAMS) {
     pages.push(`/teams/${t.bref}/${endYear}.html`, `/contracts/${t.bref}.html`);
   }
-  for (let y = prev - 10; y <= prev; y++) pages.push(`/draft/NBA_${y}.html`);
+  // Drafts back far enough to cover the league's oldest veterans.
+  for (let y = prev - 23; y <= prev; y++) pages.push(`/draft/NBA_${y}.html`);
   return pages;
 }
 

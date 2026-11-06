@@ -5,6 +5,9 @@ import { TeamBadge } from './components';
 import { seasonLabel } from './format';
 import { href } from './router';
 import { dateLabel } from '../game/advance';
+import { conferenceRank } from '../game/news';
+import { standings } from '../engine';
+import { teamTheme, themeStyle } from './theme';
 
 type IconName = 'home' | 'roster' | 'league' | 'money' | 'staff' | 'settings' | 'more' | 'back' | 'calendar';
 
@@ -50,21 +53,24 @@ export function Shell({ section, children }: { section: string; children: ReactN
   const team = save.league.teams.find((t) => t.id === save.career.teamId);
   const unread = save.inbox.filter((m) => !m.read).length;
   const id = save.id;
+  const row = team ? standings(save.league, save.season.games).find((r) => r.teamId === team.id) : undefined;
+  const record = row ? `${row.w}-${row.l}` : '0-0';
+  const sub = save.season.games.some((g) => g.hs !== undefined) && team ? `${record} · ${conferenceRank(save, team.id)}` : `${seasonLabel(save.league.meta.season)} · ${dateLabel(save.season)}`;
   const moreActive = section === 'staff' || section === 'settings' || section === 'more' || section === 'schedule';
 
   return (
-    <div className="shell">
+    <div className="shell arena" style={themeStyle(teamTheme(team))}>
       <aside className="sidebar">
         <a className="brand" href={href()}>
-          <img src="icons/favicon.svg" alt="" width={28} height={28} />
-          <span>NBA Manager</span>
+          <img src="icons/favicon.svg" alt="" width={30} height={30} />
+          <span>NBA MANAGER</span>
         </a>
         {team && (
           <div className="sidebar-team">
             <TeamBadge team={team} size={44} />
             <div>
               <div className="sidebar-team-name">{teamName(team)}</div>
-              <div className="muted small">{seasonLabel(save.league.meta.season)} · {dateLabel(save.season)}</div>
+              <div className="topbar-sub">{sub}</div>
             </div>
           </div>
         )}
@@ -85,10 +91,10 @@ export function Shell({ section, children }: { section: string; children: ReactN
       <div className="main">
         {team && (
           <header className="topbar">
-            <TeamBadge team={team} size={32} />
+            <TeamBadge team={team} size={34} />
             <div className="topbar-text">
               <div className="topbar-team">{teamName(team)}</div>
-              <div className="muted small">{seasonLabel(save.league.meta.season)} · {dateLabel(save.season)}</div>
+              <div className="topbar-sub">{sub}</div>
             </div>
           </header>
         )}

@@ -43,6 +43,31 @@ export interface SeasonState {
   stats: { regular: Record<string, StatTotals>; playoffs: Record<string, StatTotals> };
   /** Full box scores kept for some games (the user's team and recent days). */
   boxScores: Record<string, GameResult>;
+  /** Recent standout performances, newest first (for news tickers). */
+  highlights?: Highlight[];
+}
+
+export interface Highlight {
+  day: number;
+  playerId: string;
+  teamId: string;
+  oppId: string;
+  pts: number;
+  reb: number;
+  ast: number;
+  won: boolean;
+}
+
+function recordHighlights(season: SeasonState, day: number, result: GameResult) {
+  const list = (season.highlights ??= []);
+  for (const [side, opp] of [[result.home, result.away], [result.away, result.home]] as const) {
+    for (const l of side.lines) {
+      const reb = l.orb + l.drb;
+      const big = l.pts >= 38 || (l.pts >= 10 && reb >= 10 && l.ast >= 10) || reb >= 20 || l.ast >= 16;
+      if (big) list.unshift({ day, playerId: l.playerId, teamId: side.teamId, oppId: opp.teamId, pts: l.pts, reb, ast: l.ast, won: side.score > opp.score });
+    }
+  }
+  if (list.length > 40) list.length = 40;
 }
 
 // ------------------------------------------------------------------ schedule
@@ -243,6 +268,7 @@ export function simulateDay(league: LeagueFile, season: SeasonState, rng: Rng, k
     for (const g of today) {
       const result = playGame(league, rng, g);
       addStats(season.stats.regular, result);
+      recordHighlights(season, season.day, result);
       if (keepBox(g)) season.boxScores[g.id] = result;
       report.played.push({ game: g, result });
     }
@@ -269,6 +295,7 @@ export function simulateDay(league: LeagueFile, season: SeasonState, rng: Rng, k
     };
     const result = playGame(league, rng, g);
     addStats(season.stats.playoffs, result);
+    recordHighlights(season, season.day, result);
     if (keepBox(g)) season.boxScores[g.id] = result;
     s.games.push(g);
     const topWon = (g.home === s.top.teamId) === ((g.hs ?? 0) > (g.as ?? 0));

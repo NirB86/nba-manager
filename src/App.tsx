@@ -16,9 +16,9 @@ import { BoxScore, Schedule } from './ui/screens/Season';
 export function App() {
   const path = useRoute();
   const [first] = path;
-  if (first === 'new') return <NewCareer />;
+  if (first === 'new') return <div className="arena"><NewCareer /></div>;
   if (first === 'c' && path[1]) return <Career saveId={path[1]} rest={path.slice(2)} />;
-  return <MainMenu />;
+  return <div className="arena"><MainMenu /></div>;
 }
 
 function Career({ saveId, rest }: { saveId: string; rest: string[] }) {
@@ -35,7 +35,7 @@ function Career({ saveId, rest }: { saveId: string; rest: string[] }) {
     };
   }, [saveId]);
 
-  if (save === undefined) return <div className="loading">Loading career…</div>;
+  if (save === undefined) return <div className="arena loading">Loading career…</div>;
   if (save === null) {
     return (
       <div className="loading">

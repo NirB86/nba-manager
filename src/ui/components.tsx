@@ -2,21 +2,34 @@ import type { ReactNode } from 'react';
 import type { Team } from '../engine';
 import { attrTone, ovrTone } from './format';
 
+/** Generated team crest: a shield in the team's colors with its abbreviation. */
 export function TeamBadge({ team, size = 40 }: { team: Pick<Team, 'abbrev' | 'colors'>; size?: number }) {
+  const { primary, secondary } = team.colors;
+  const text = team.abbrev.length > 3 ? 11 : 13;
   return (
-    <span
-      className="team-badge"
-      style={{
-        width: size,
-        height: size,
-        fontSize: size * 0.32,
-        background: team.colors.primary,
-        boxShadow: `inset 0 0 0 ${Math.max(2, size / 14)}px ${team.colors.secondary}`,
-      }}
-      aria-hidden="true"
-    >
-      {team.abbrev}
-    </span>
+    <svg className="crest" width={size} height={Math.round(size * 1.15)} viewBox="0 0 40 46" aria-hidden="true">
+      <path d="M20 1.5 L37.5 7.5 V22 C37.5 33.5 30 40.5 20 44.5 C10 40.5 2.5 33.5 2.5 22 V7.5 Z" fill={primary} stroke={secondary} strokeWidth="2.5" />
+      <path d="M20 6 L33 10.5 V22 C33 30.5 27.5 36 20 39.5" fill="none" stroke={secondary} strokeOpacity="0.35" strokeWidth="1" />
+      <text x="20" y="27.5" textAnchor="middle" fontFamily="Anton, Impact, sans-serif" fontSize={text} fill={secondary} letterSpacing="0.3">
+        {team.abbrev}
+      </text>
+    </svg>
+  );
+}
+
+/** Generated player figure wearing the team jersey and number. */
+export function PlayerFigure({ number, colors, size = 104, tone = '#2b3550' }: { number: number | string; colors: { primary: string; secondary: string }; size?: number; tone?: string }) {
+  return (
+    <svg className="figure" width={size} height={Math.round(size * 0.88)} viewBox="0 0 120 106" aria-hidden="true">
+      <circle cx="60" cy="30" r="19" fill={tone} />
+      <path d="M6 106 Q8 66 40 54 Q60 64 80 54 Q112 66 114 106 Z" fill={tone} />
+      <path d="M28 106 L30 70 Q34 58 46 53 Q60 70 74 53 Q86 58 90 70 L92 106 Z" fill={colors.secondary} />
+      <path d="M46 53 Q60 70 74 53" fill="none" stroke={colors.primary} strokeWidth="3" />
+      <path d="M30 70 Q34 58 46 53 M74 53 Q86 58 90 70" fill="none" stroke={colors.primary} strokeWidth="3" />
+      <text x="60" y="97" textAnchor="middle" fontFamily="Anton, Impact, sans-serif" fontSize="24" fill={colors.primary}>
+        {number}
+      </text>
+    </svg>
   );
 }
 

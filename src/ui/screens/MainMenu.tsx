@@ -49,8 +49,11 @@ export function MainMenu() {
   return (
     <div className="menu">
       <div className="menu-hero">
-        <img src="icons/favicon.svg" alt="" width={56} height={56} />
-        <h1>NBA Manager</h1>
+        <img src="icons/favicon.svg" alt="" width={72} height={72} />
+        <span className="eyebrow">Basketball franchise management</span>
+        <h1>
+          NBA <span>Manager</span>
+        </h1>
         <p className="muted">Run the franchise. Build the roster. Hang the banner.</p>
         <div className="menu-actions">
           <a className="btn btn-primary btn-lg" href={href('new')}>
@@ -85,9 +88,9 @@ export function MainMenu() {
         {saves?.length === 0 && <p className="muted">No careers yet. Start a new one to take over a franchise.</p>}
         <ul className="save-list">
           {saves?.map((s) => (
-            <li key={s.id} className="save-item">
+            <li key={s.id} className="save-item" style={{ ['--save-team' as string]: s.colors.primary }}>
               <a className="save-main" href={href('c', s.id, 'home')}>
-                <TeamBadge team={s} size={44} />
+                <TeamBadge team={s} size={48} />
                 <div>
                   <div className="save-name">{s.name}</div>
                   <div className="muted small">
