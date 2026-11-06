@@ -11,6 +11,8 @@ export function potentialRange(save: SaveGame, player: Player): [number, number]
   let spread = Math.max(1, Math.round((21 - best) / 3));
   if (player.teamId === save.career.teamId) spread = Math.max(1, Math.round(spread / 2));
   const ovr = playerOverall(player);
+  // No growth left: scouts agree the player is at his peak.
+  if (player.potential <= ovr) return [ovr, ovr];
   // Offset is stable per player so the range doesn't jump around between visits.
   const hash = [...player.id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7);
   const offset = (hash % (2 * spread + 1)) - spread;

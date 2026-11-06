@@ -10,3 +10,5 @@
 - Changing the league file shape means bumping `LEAGUE_FORMAT_VERSION` and updating
   `docs/league-format.md` and `validateLeague()`.
 - Run `npm test` and `npm run build` before committing.
+- Real NBA data only via `tools/import-real/` into a local `*.league.json`; never commit
+  real-league output or page caches (the repo is public).

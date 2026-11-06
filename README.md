@@ -26,6 +26,12 @@ Phase 0 (foundation) is done:
 
 Next is Phase 1: the possession-based simulation engine and a playable season.
 
+## Real NBA league (personal use)
+
+`tools/import-real/` builds a league file with current real rosters, contracts
+and ratings from Basketball-Reference stats. See `tools/import-real/README.md`.
+The output is never committed.
+
 ## Development
 
 ```bash

@@ -67,6 +67,7 @@ export function RosterTable({ save, players }: { save: SaveGame; players: Player
                     {fullName(p)}
                   </a>
                   {p.contract?.kind === 'rookie' && <Pill>Rookie deal</Pill>}
+                  {p.contract?.kind === 'two-way' && <Pill>Two-way</Pill>}
                 </td>
                 <td>{p.position}</td>
                 <td className="num">{playerAge(p, season)}</td>
@@ -87,6 +88,7 @@ export function RosterTable({ save, players }: { save: SaveGame; players: Player
 export function Roster() {
   const { save } = useCareer();
   const players = save.league.players.filter((p) => p.teamId === save.career.teamId);
+  const twoWay = players.filter((p) => p.contract?.kind === 'two-way').length;
   return (
     <>
       <div className="page-header">
@@ -94,7 +96,7 @@ export function Roster() {
           <div>
             <h1>Roster</h1>
             <p className="muted">
-              {players.length} of {save.league.settings.rosterMax} roster spots · tap a column to sort, a player for details
+              {players.length - twoWay} of {save.league.settings.rosterMax} roster spots{twoWay ? ` + ${twoWay} two-way` : ''} · tap a column to sort, a player for details
             </p>
           </div>
         </div>

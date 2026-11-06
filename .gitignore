@@ -4,3 +4,7 @@ dev-dist
 *.log
 .DS_Store
 *.tsbuildinfo
+
+# Real-league files and page caches (personal use, never commit)
+*.league.json
+.bref-cache/
