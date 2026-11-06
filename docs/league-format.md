@@ -1,4 +1,4 @@
-# League file format (version 1)
+# League file format (version 2)
 
 A league file is one JSON document that holds everything a new career starts
 from. The game ships with a generator for fictional leagues; any other league
@@ -11,7 +11,7 @@ The TypeScript definition is `src/engine/types.ts` and `validateLeague()` in
 | Field | Type | Notes |
 | --- | --- | --- |
 | `format` | `"nbam-league"` | Required, fixed value |
-| `version` | number | `1` |
+| `version` | number | `2` (version 1 files, without images, still load) |
 | `meta` | object | `name`, `season` (year the season starts: 2026 = 2026-27), `source` (`fictional`, `real`, `custom`), `createdAt`, optional `seed` |
 | `settings` | object | Cap figures and roster rules, below |
 | `conferences` | list | Each `{ id, name, divisions: [{ id, name }] }` |
@@ -38,7 +38,9 @@ All money in US dollars.
 
 ## teams
 
-`{ id, city, name, abbrev, conferenceId, divisionId, market: "small" | "mid" | "large", colors: { primary, secondary }, arena }`
+`{ id, city, name, abbrev, conferenceId, divisionId, market: "small" | "mid" | "large", colors: { primary, secondary }, arena, logo?, wordmark? }`
+
+`logo` and `wordmark` (optional, v2) are image credits: `{ url, credit, license, source, sourceUrl }`. Only free-licensed images belong here; the game shows the credit.
 
 ## players
 
@@ -57,6 +59,7 @@ All money in US dollars.
 | `contract` | `null` or `{ years: [{ season, salary }], option: null or { season, type: "player" or "team" }, kind: "standard", "rookie", "two-way", "minimum" or "max", noTrade, signedSeason }` |
 | `draft` | `null` (undrafted) or `{ season, round, pick, teamId }` |
 | `experience` | Seasons played before the current one |
+| `photo` | Optional (v2): `{ url, credit, license, source, sourceUrl }` for a free-licensed photo; `url` must be https |
 
 The overall rating is not stored; the game computes it from attributes and position.
 

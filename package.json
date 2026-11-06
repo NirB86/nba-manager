@@ -12,7 +12,9 @@
     "test": "vitest run",
     "typecheck": "tsc -b",
     "import:fetch": "NODE_USE_ENV_PROXY=1 tsx tools/import-real/fetch.ts",
-    "import:build": "tsx tools/import-real/build.ts"
+    "import:build": "tsx tools/import-real/build.ts",
+    "import:images": "NODE_USE_ENV_PROXY=1 tsx tools/import-real/images.ts",
+    "import:images-more": "NODE_USE_ENV_PROXY=1 tsx tools/import-real/images-more.ts"
   },
   "dependencies": {
     "idb": "8.0.4",

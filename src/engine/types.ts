@@ -1,10 +1,10 @@
-// League file format, version 1.
+// League file format, version 2 (version 1 = the same without images).
 // The engine never hard-codes league content: everything a career starts from
 // lives in a LeagueFile (generated, imported from real data, or hand-edited).
 // See docs/league-format.md for the human-readable spec.
 
 export const LEAGUE_FORMAT = 'nbam-league';
-export const LEAGUE_FORMAT_VERSION = 1;
+export const LEAGUE_FORMAT_VERSION = 2;
 
 export type Id = string;
 export type Position = 'PG' | 'SG' | 'SF' | 'PF' | 'C';
@@ -60,6 +60,15 @@ export interface Division {
   name: string;
 }
 
+/** A free-licensed image with the credit its license requires. */
+export interface ImageCredit {
+  url: string;
+  credit: string;
+  license: string;
+  source: string;
+  sourceUrl: string;
+}
+
 export interface Team {
   id: Id;
   city: string;
@@ -70,6 +79,9 @@ export interface Team {
   market: Market;
   colors: { primary: string; secondary: string };
   arena: string;
+  /** Optional (format v2): team logo and wordmark images. */
+  logo?: ImageCredit;
+  wordmark?: ImageCredit;
 }
 
 /** Attribute scale is 1-20, like Football Manager. */
@@ -137,6 +149,8 @@ export interface Player {
   draft: { season: number; round: number; pick: number; teamId: Id } | null;
   /** Years in the league before the current season. */
   experience: number;
+  /** Optional (format v2): a free-licensed photo. */
+  photo?: ImageCredit;
 }
 
 export type StaffRole = 'HC' | 'AC' | 'SCOUT' | 'MED' | 'DEV';

@@ -5,7 +5,7 @@
 //
 //   npx tsx tools/import-real/build.ts <cache-dir> <out.json> [season-end-year]
 
-import { existsSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { buildContract, maxSalaryShare } from '../../src/engine/contracts';
 import { STAFF_REGIONS } from '../../src/engine/data/names';
@@ -550,6 +550,18 @@ for (let s = END_YEAR; s < END_YEAR + 7; s++) {
       draftPicks.push({ id: `pk-${s}-${round}-${t.abbrev.toLowerCase()}`, season: s, round, originalTeamId: t.id, ownerTeamId: t.id, protection: null });
     }
   }
+}
+
+// Free-licensed photos and logos, if images.ts has run.
+const imagesFile = join(cacheDir, 'images.json');
+if (existsSync(imagesFile)) {
+  const images = JSON.parse(readFileSync(imagesFile, 'utf8')) as { players: Record<string, Player['photo'] | null>; teams: Record<string, Pick<Team, 'logo' | 'wordmark'>> };
+  for (const p of players) {
+    const photo = images.players[p.id];
+    if (photo) p.photo = photo;
+  }
+  for (const t of teams) Object.assign(t, images.teams[t.id] ?? {});
+  console.log(`Images: ${players.filter((p) => p.photo).length} player photos, ${teams.filter((t) => t.logo).length} logos, ${teams.filter((t) => t.wordmark).length} wordmarks`);
 }
 
 const league: LeagueFile = {

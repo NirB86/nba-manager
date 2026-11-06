@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { CAP_STATUS_LABEL, capStatus, rosterOf, teamName, teamSummaries } from '../../engine';
 import { useCareer } from '../career-context';
-import { Card, Ovr, Pill, Segmented, Stat, TeamBadge } from '../components';
+import { Card, ImageCreditLine, Ovr, Pill, Segmented, Stat, TeamBadge } from '../components';
 import { money } from '../format';
 import { href } from '../router';
 import { PageHeader } from '../Shell';
@@ -101,6 +101,11 @@ export function TeamPage({ teamId }: { teamId: string }) {
       <div className="team-hero" style={{ ['--team' as string]: team.colors.primary }}>
         <TeamBadge team={team} size={64} />
         <div>
+          {team.wordmark && (
+            <span className="wordmark">
+              <img src={team.wordmark.url} alt={teamName(team)} />
+            </span>
+          )}
           <h1>{teamName(team)}</h1>
           <p className="muted">
             {div?.name} Division · {team.arena} · {team.market} market
@@ -114,6 +119,8 @@ export function TeamPage({ teamId }: { teamId: string }) {
         <Stat label="First-round picks" value={picks.length} hint="Next 7 drafts" />
       </div>
       <RosterTable save={save} players={roster} />
+      <ImageCreditLine label="Logo" image={team.logo} />
+      <ImageCreditLine label="Wordmark" image={team.wordmark} />
     </>
   );
 }

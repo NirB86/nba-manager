@@ -1,9 +1,17 @@
-import type { ReactNode } from 'react';
-import type { Team } from '../engine';
+import { useState, type ReactNode } from 'react';
+import type { ImageCredit, Team } from '../engine';
 import { attrTone, ovrTone } from './format';
 
 /** Generated team crest: a shield in the team's colors with its abbreviation. */
-export function TeamBadge({ team, size = 40 }: { team: Pick<Team, 'abbrev' | 'colors'>; size?: number }) {
+export function TeamBadge({ team, size = 40 }: { team: Pick<Team, 'abbrev' | 'colors'> & { logo?: ImageCredit }; size?: number }) {
+  const [broken, setBroken] = useState(false);
+  if (team.logo && !broken) {
+    return (
+      <span className="crest logo-img" style={{ width: size, height: Math.round(size * 1.15) }}>
+        <img src={team.logo.url} alt="" loading="lazy" onError={() => setBroken(true)} />
+      </span>
+    );
+  }
   const { primary, secondary } = team.colors;
   const text = team.abbrev.length > 3 ? 11 : 13;
   return (
@@ -14,6 +22,32 @@ export function TeamBadge({ team, size = 40 }: { team: Pick<Team, 'abbrev' | 'co
         {team.abbrev}
       </text>
     </svg>
+  );
+}
+
+/** A player's free-licensed photo, or the jersey figure when there is none. */
+export function PlayerPhoto({ photo, number, colors, className }: { photo?: ImageCredit; number: number | string; colors: { primary: string; secondary: string }; className?: string }) {
+  const [broken, setBroken] = useState(false);
+  if (photo && !broken) {
+    return <img className={`photo ${className ?? ''}`} src={photo.url} alt="" loading="lazy" onError={() => setBroken(true)} />;
+  }
+  return (
+    <span className={`photo photo-figure ${className ?? ''}`}>
+      <PlayerFigure number={number} colors={colors} size={120} />
+    </span>
+  );
+}
+
+/** Credit line required by the image's license. */
+export function ImageCreditLine({ label, image }: { label: string; image?: ImageCredit }) {
+  if (!image) return null;
+  return (
+    <p className="credit">
+      {label}: {image.credit} ·{' '}
+      <a href={image.sourceUrl} target="_blank" rel="noreferrer noopener">
+        {image.license}, {image.source}
+      </a>
+    </p>
   );
 }
 

@@ -1,7 +1,7 @@
 import { ATTRIBUTE_GROUPS, fullName, playerAge, playerOverall, salaryIn, teamName, type Attributes, type Player } from '../../engine';
 import { personalityTraits, potentialRange } from '../../game/scouting';
 import { useCareer } from '../career-context';
-import { Card, Pill, PlayerFigure, TeamBadge } from '../components';
+import { Card, ImageCreditLine, Pill, PlayerPhoto, TeamBadge } from '../components';
 import { attrTone, height, money, ordinal, ovrTone, seasonLabel } from '../format';
 import { href } from '../router';
 import { PageHeader } from '../Shell';
@@ -84,7 +84,7 @@ export function PlayerPage({ playerId }: { playerId: string }) {
       <PageHeader title="" back={back} />
       <section className="pp-head" style={{ ['--pteam' as string]: colors.primary }}>
         <div className="pp-avatar">
-          <PlayerFigure number={p.jersey} colors={colors} size={84} tone="#0f1528" />
+          <PlayerPhoto photo={p.photo} number={p.jersey} colors={colors} />
         </div>
         <div style={{ minWidth: 0 }}>
           <div className="pp-name">{fullName(p)}</div>
@@ -193,6 +193,7 @@ export function PlayerPage({ playerId }: { playerId: string }) {
       </div>
 
       <SeasonStats playerId={p.id} />
+      <ImageCreditLine label="Photo" image={p.photo} />
     </>
   );
 }

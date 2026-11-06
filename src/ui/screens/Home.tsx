@@ -4,7 +4,7 @@ import { advance, lastUserGame, nextUserGame, type AdvanceTarget, type Progress 
 import { conferenceRank, leagueWire, ownerMood } from '../../game/news';
 import type { SaveGame } from '../../storage/saves';
 import { useCareer } from '../career-context';
-import { Card, Pill, PlayerFigure, TeamBadge } from '../components';
+import { Card, Pill, PlayerPhoto, TeamBadge } from '../components';
 import { money, seasonLabel } from '../format';
 import { href } from '../router';
 import { PageHeader } from '../Shell';
@@ -240,7 +240,9 @@ export function Home({ messageId }: { messageId?: string }) {
       <div className="five">
         {five.map((p) => (
           <a key={p.id} className="five-card" href={href('c', save.id, 'player', p.id)}>
-            <PlayerFigure number={p.jersey} colors={team.colors} size={110} />
+            <div className="photo-box">
+              <PlayerPhoto photo={p.photo} number={p.jersey} colors={team.colors} />
+            </div>
             <span className="name">{p.lastName}</span>
             <span className="ovr-big">{playerOverall(p)}</span>
           </a>

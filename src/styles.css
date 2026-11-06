@@ -488,3 +488,18 @@ button { font: inherit; color: inherit; }
 .timeline .paid { background: color-mix(in srgb, var(--accent) 85%, transparent); color: var(--accent-ink); }
 .timeline .option { background: color-mix(in srgb, var(--accent) 30%, transparent); color: var(--text); border: 1px dashed var(--accent); }
 .timeline .free { border: 1px dashed var(--border-strong); color: var(--text-3); }
+
+/* Photos and logos */
+.logo-img { display: inline-grid; place-items: center; filter: none; }
+.logo-img img { max-width: 100%; max-height: 100%; object-fit: contain; filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.45)); }
+.photo { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 18%; }
+.photo-figure { display: grid; place-items: end center; overflow: hidden; }
+.photo-figure svg { width: 100%; height: auto; }
+.five-card .photo-box { width: 100%; height: 104px; overflow: hidden; background: rgba(0, 0, 0, 0.25); }
+.pp-avatar .photo { border-radius: 50%; }
+.credit { font-size: 11px; color: var(--text-3); margin-top: 4px; line-height: 1.35; }
+.credit a { color: var(--text-3); text-decoration: underline; }
+.mini-face { width: 30px; height: 30px; border-radius: 50%; overflow: hidden; flex: none; background: rgba(255, 255, 255, 0.08); display: inline-block; vertical-align: middle; margin-right: 8px; }
+.mini-face .photo-figure svg { margin-top: 4px; }
+.wordmark { display: inline-flex; align-items: center; padding: 8px 14px; border-radius: 12px; background: #f4f6fb; max-width: 260px; }
+.wordmark img { max-height: 44px; max-width: 100%; object-fit: contain; }

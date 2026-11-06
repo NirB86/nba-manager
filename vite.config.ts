@@ -41,6 +41,12 @@ export default defineConfig({
             handler: 'CacheFirst',
             options: { cacheName: 'fonts', expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 365 }, cacheableResponse: { statuses: [0, 200] } },
           },
+          {
+            // Free-licensed player photos and logos from imported leagues.
+            urlPattern: /^https:\/\/(upload\.wikimedia\.org|api\.openverse\.org)\/.*/i,
+            handler: 'CacheFirst',
+            options: { cacheName: 'photos', expiration: { maxEntries: 1500, maxAgeSeconds: 60 * 60 * 24 * 180 }, cacheableResponse: { statuses: [0, 200] } },
+          },
         ],
       },
     }),

@@ -3,7 +3,7 @@ import { fullName, playerAge, playerOverall, salaryIn, type Player } from '../..
 import { potentialRange } from '../../game/scouting';
 import type { SaveGame } from '../../storage/saves';
 import { useCareer } from '../career-context';
-import { Ovr, Pill, Segmented } from '../components';
+import { Ovr, Pill, PlayerPhoto, Segmented } from '../components';
 import { f1, pct, perGame } from './Season';
 import { height, money, seasonLabel } from '../format';
 import { href } from '../router';
@@ -19,6 +19,7 @@ export function RosterTable({ save, players }: { save: SaveGame; players: Player
   const stats = (p: Player) => perGame(save.season.stats.regular[p.id]);
   const saveId = save.id;
   const pot = (p: Player) => potentialRange(save, p);
+  const teamColors = (id: string | null) => league.teams.find((t) => t.id === id)?.colors ?? { primary: '#3a4256', secondary: '#c3cad8' };
   const season = league.meta.season;
   const value = (p: Player): number | string => {
     switch (sort) {
@@ -115,6 +116,9 @@ export function RosterTable({ save, players }: { save: SaveGame; players: Player
                 <td className="num muted hide-sm">{p.jersey}</td>
                 <td>
                   <a href={href('c', saveId, 'player', p.id)} className="row-link" onClick={(e) => e.stopPropagation()}>
+                    <span className="mini-face">
+                      <PlayerPhoto photo={p.photo} number={p.jersey} colors={teamColors(p.teamId)} />
+                    </span>
                     {fullName(p)}
                   </a>
                   {p.contract?.kind === 'rookie' && <Pill>Rookie deal</Pill>}

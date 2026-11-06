@@ -60,6 +60,7 @@ export function validateLeague(data: unknown): ValidationResult {
       }
     }
     if (p.teamId && !p.contract) warnings.push(`${label} is on a team without a contract.`);
+    if (p.photo && !/^https:\/\//.test(p.photo.url ?? '')) err(`${label}: photo url must start with https://.`);
     if (p.teamId) rosterSize.set(p.teamId, (rosterSize.get(p.teamId) ?? 0) + 1);
   }
 
