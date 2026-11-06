@@ -1,6 +1,7 @@
 {
   "name": "nba-manager",
   "private": true,
+  "license": "UNLICENSED",
   "version": "0.1.0",
   "description": "Basketball franchise management game (working title).",
   "type": "module",

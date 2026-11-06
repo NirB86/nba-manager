@@ -51,3 +51,7 @@ GitHub Pages on every push to `main`. GitHub Pages must be enabled with
 **Settings → Pages → Source: GitHub Actions**.
 
 All teams, players and staff in the default league are fictional.
+
+## License
+
+Copyright (c) 2026 NirB86. All rights reserved. See `LICENSE`.

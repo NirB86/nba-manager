@@ -109,7 +109,7 @@ export function MainMenu() {
         </ul>
         <p className="muted small">Saves live on this device. Export a save to back it up or move it to another device. Cloud sync is coming.</p>
       </section>
-      <footer className="menu-footer muted small">Working title · v{__APP_VERSION__} · All teams and players are fictional</footer>
+      <footer className="menu-footer muted small">© 2026 NirB86 · v{__APP_VERSION__} · All teams and players are fictional</footer>
     </div>
   );
 }
