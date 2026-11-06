@@ -1,0 +1,55 @@
+// Keeps the downloaded NBA league up to date on the device and passes new
+// photos and logos on to existing careers.
+
+import type { LeagueFile } from '../engine';
+import { kvGet, kvSet, type SaveGame } from '../storage/saves';
+import { cloudConfigured, currentUser, fetchLeague, fetchManifest, type CachedLeague } from './cloud';
+
+const KEY = 'nba-league';
+
+export async function cachedLeague(): Promise<CachedLeague | undefined> {
+  try {
+    return await kvGet<CachedLeague>(KEY);
+  } catch {
+    return undefined;
+  }
+}
+
+export type SyncResult = { status: 'updated' | 'current'; league: CachedLeague } | { status: 'signed-out' | 'not-configured' } | { status: 'error'; message: string };
+
+/** Download the league if the cloud has a newer version than this device. */
+export async function syncLeague(): Promise<SyncResult> {
+  if (!cloudConfigured()) return { status: 'not-configured' };
+  try {
+    if (!(await currentUser())) return { status: 'signed-out' };
+    const manifest = await fetchManifest();
+    const have = await cachedLeague();
+    if (have && have.manifest.version === manifest.version) return { status: 'current', league: have };
+    const league = await fetchLeague(manifest);
+    const cached: CachedLeague = { manifest, league };
+    await kvSet(KEY, cached);
+    return { status: 'updated', league: cached };
+  } catch (e) {
+    return { status: 'error', message: e instanceof Error ? e.message : 'Sync failed.' };
+  }
+}
+
+/** Copy photos and logos from the latest league into a career, matching by id. */
+export function withLatestImages(save: SaveGame, latest: CachedLeague | undefined): SaveGame {
+  if (!latest || save.league.meta.source !== 'real' || save.leagueVersion === latest.manifest.version) return save;
+  const src: LeagueFile = latest.league;
+  const photos = new Map(src.players.filter((p) => p.photo).map((p) => [p.id, p.photo]));
+  const teams = new Map(src.teams.map((t) => [t.id, t]));
+  return {
+    ...save,
+    leagueVersion: latest.manifest.version,
+    league: {
+      ...save.league,
+      players: save.league.players.map((p) => (photos.get(p.id) ? { ...p, photo: photos.get(p.id) } : p)),
+      teams: save.league.teams.map((t) => {
+        const s = teams.get(t.id);
+        return s ? { ...t, logo: s.logo ?? t.logo, wordmark: s.wordmark ?? t.wordmark } : t;
+      }),
+    },
+  };
+}

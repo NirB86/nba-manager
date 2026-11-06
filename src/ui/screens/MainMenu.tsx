@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { deleteSave, exportSave, importSaveFile, listSaves, loadSave, type SaveSummary } from '../../storage/saves';
 import { TeamBadge } from '../components';
+import { cloudConfigured } from '../../cloud/cloud';
+import { cachedLeague, syncLeague, type SyncResult } from '../../cloud/sync';
+import type { CachedLeague } from '../../cloud/cloud';
 import { seasonLabel, timeAgo } from '../format';
 import { href, navigate } from '../router';
 
@@ -18,8 +21,15 @@ export function MainMenu() {
   const fileInput = useRef<HTMLInputElement>(null);
 
   const refresh = () => listSaves().then(setSaves).catch(() => setSaves([]));
+  const [league, setLeague] = useState<CachedLeague | undefined>(undefined);
+  const [sync, setSync] = useState<SyncResult | 'syncing'>('syncing');
   useEffect(() => {
     void refresh();
+    void cachedLeague().then(setLeague);
+    void syncLeague().then((r) => {
+      setSync(r);
+      if (r.status === 'updated' || r.status === 'current') setLeague(r.league);
+    });
   }, []);
 
   const onImport = async (file: File | undefined) => {
@@ -76,6 +86,8 @@ export function MainMenu() {
         {error && <p className="error">{error}</p>}
       </div>
 
+      {cloudConfigured() && <LeagueCard league={league} sync={sync} />}
+
       {showInstallHint && (
         <div className="install-hint">
           <strong>Play it like an app:</strong> tap the Share button in Safari, then <em>Add to Home Screen</em>.
@@ -112,7 +124,40 @@ export function MainMenu() {
         </ul>
         <p className="muted small">Saves live on this device. Export a save to back it up or move it to another device. Cloud sync is coming.</p>
       </section>
-      <footer className="menu-footer muted small">© 2026 NirB86 · v{__APP_VERSION__} · The default league is fictional</footer>
+      <footer className="menu-footer muted small">© 2026 NirB86 · v{__APP_VERSION__} · Your careers are saved on this device</footer>
+    </div>
+  );
+}
+
+function LeagueCard({ league, sync }: { league: CachedLeague | undefined; sync: SyncResult | 'syncing' }) {
+  const status = sync === 'syncing' ? 'Checking for updates…' : sync.status === 'updated' ? 'Just updated' : sync.status === 'current' ? 'Up to date' : sync.status === 'error' ? `Could not update: ${sync.message}` : '';
+  if (!league) {
+    return (
+      <div className="league-card">
+        <div>
+          <span className="eyebrow">NBA league</span>
+          <p className="muted small">{sync !== 'syncing' && sync.status === 'signed-out' ? 'Sign in to download the current NBA rosters, contracts and photos.' : status}</p>
+        </div>
+        {sync !== 'syncing' && sync.status === 'signed-out' && (
+          <a className="btn btn-primary" href={href('account')}>
+            Sign in
+          </a>
+        )}
+      </div>
+    );
+  }
+  const m = league.manifest;
+  return (
+    <div className="league-card">
+      <div>
+        <span className="eyebrow">{m.name}</span>
+        <p className="muted small">
+          {m.players} players · {m.photos} photos · updated {new Date(m.updatedAt).toLocaleDateString()} · {status}
+        </p>
+      </div>
+      <a className="btn btn-sm" href={href('account')}>
+        Account
+      </a>
     </div>
   );
 }

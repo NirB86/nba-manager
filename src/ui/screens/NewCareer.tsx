@@ -1,9 +1,7 @@
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   CAP_STATUS_LABEL,
   capStatus,
-  generateLeague,
-  newSeed,
   teamName,
   teamSummaries,
   validateLeague,
@@ -12,15 +10,16 @@ import {
 import { TIER_LABEL, createCareer, ownerExpectation } from '../../game/career';
 import { putSave, requestPersistence, type CareerSettings, type Difficulty, type Role, type ScoutingDepth, type SimMode } from '../../storage/saves';
 import { Ovr, Segmented, TeamBadge } from '../components';
-import { money, seasonLabel } from '../format';
+import { money } from '../format';
 import { href, navigate } from '../router';
+import { cachedLeague } from '../../cloud/sync';
 
-type Step = 'league' | 'team' | 'options';
+type Step = 'team' | 'options';
 
 export function NewCareer() {
-  const [step, setStep] = useState<Step>('league');
-  const [seed, setSeed] = useState(newSeed);
+  const [step, setStep] = useState<Step>('team');
   const [imported, setImported] = useState<LeagueFile | null>(null);
+  const [cloudLeague, setCloudLeague] = useState<LeagueFile | null | undefined>(undefined);
   const [importMsg, setImportMsg] = useState<{ errors: string[]; warnings: string[] } | null>(null);
   const [teamId, setTeamId] = useState<string | null>(null);
   const [role, setRole] = useState<Role>('gm');
@@ -31,8 +30,13 @@ export function NewCareer() {
   const [busy, setBusy] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
-  const league = useMemo(() => imported ?? generateLeague({ seed }), [imported, seed]);
+  useEffect(() => {
+    void cachedLeague().then((c) => setCloudLeague(c?.league ?? null));
+  }, []);
+
+  const league = imported ?? cloudLeague ?? null;
   const summaries = useMemo(() => {
+    if (!league) return [];
     const ranked = teamSummaries(league).sort((a, b) => b.rating - a.rating);
     return ranked.map((s, i) => ({ ...s, rank: i + 1 }));
   }, [league]);
@@ -54,7 +58,7 @@ export function NewCareer() {
   };
 
   const start = async () => {
-    if (!chosen) return;
+    if (!chosen || !league) return;
     setBusy(true);
     const settings: CareerSettings = { teamId: chosen.team.id, role, simMode, scouting, difficulty };
     const save = createCareer(structuredClone(league), settings, name.trim() || `${teamName(chosen.team)} career`);
@@ -63,7 +67,58 @@ export function NewCareer() {
     navigate('c', save.id, 'home');
   };
 
-  const tierLabel = (teamId: string) => TIER_LABEL[ownerExpectation(league, teamId).tier];
+  const tierLabel = (teamId: string) => (league ? TIER_LABEL[ownerExpectation(league, teamId).tier] : '');
+
+  const fileInputEl = (
+    <input
+      ref={fileInput}
+      type="file"
+      accept=".json,application/json"
+      hidden
+      onChange={(e) => {
+        void onLeagueFile(e.target.files?.[0]);
+        e.target.value = '';
+      }}
+    />
+  );
+
+  if (cloudLeague === undefined && !imported) return <div className="loading">Loading the league…</div>;
+
+  if (!league) {
+    return (
+      <div className="wizard">
+        <header className="wizard-head">
+          <a className="back-link" href={href()}>
+            ← Main menu
+          </a>
+          <h1>New career</h1>
+        </header>
+        <div className="wizard-body narrow">
+          <div className="card">
+            <h2>Get the NBA league</h2>
+            <p className="muted" style={{ marginTop: 8 }}>
+              Sign in once and the game downloads the current NBA rosters, contracts and photos. Updates arrive automatically after that.
+            </p>
+            <div className="row-actions">
+              <a className="btn btn-primary" href={href('account')}>
+                Sign in
+              </a>
+            </div>
+          </div>
+          {importMsg && importMsg.errors.length > 0 && (
+            <div className="error-box">
+              <strong>That league file has problems:</strong>
+              <ul>{importMsg.errors.slice(0, 8).map((e) => <li key={e}>{e}</li>)}</ul>
+            </div>
+          )}
+          <button type="button" className="btn btn-ghost" onClick={() => fileInput.current?.click()}>
+            Or load a league file from this device
+          </button>
+          {fileInputEl}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="wizard">
@@ -73,59 +128,13 @@ export function NewCareer() {
         </a>
         <h1>New career</h1>
         <ol className="steps">
-          {(['league', 'team', 'options'] as Step[]).map((s, i) => (
+          {(['team', 'options'] as Step[]).map((s, i) => (
             <li key={s} className={s === step ? 'on' : ''}>
-              <span>{i + 1}</span> {s === 'league' ? 'League' : s === 'team' ? 'Team' : 'Your role'}
+              <span>{i + 1}</span> {s === 'team' ? 'Choose your team' : 'Your role'}
             </li>
           ))}
         </ol>
       </header>
-
-      {step === 'league' && (
-        <div className="wizard-body">
-          <div className="choice-grid">
-            <button type="button" className={`choice ${!imported ? 'on' : ''}`} onClick={() => setImported(null)}>
-              <strong>Fictional league</strong>
-              <span className="muted">30 invented franchises with generated players, coaches and contracts. A new league every time.</span>
-              <span className="small muted">League #{seed}</span>
-            </button>
-            <button type="button" className={`choice ${imported ? 'on' : ''}`} onClick={() => fileInput.current?.click()}>
-              <strong>Load a league file</strong>
-              <span className="muted">Use a league file you made or downloaded, such as real NBA rosters from the import tool.</span>
-              {imported && <span className="small">Loaded: {imported.meta.name}</span>}
-            </button>
-            <input
-              ref={fileInput}
-              type="file"
-              accept=".json,application/json"
-              hidden
-              onChange={(e) => {
-                void onLeagueFile(e.target.files?.[0]);
-                e.target.value = '';
-              }}
-            />
-          </div>
-          {importMsg && importMsg.errors.length > 0 && (
-            <div className="error-box">
-              <strong>That league file has problems:</strong>
-              <ul>{importMsg.errors.slice(0, 8).map((e) => <li key={e}>{e}</li>)}</ul>
-            </div>
-          )}
-          {!imported && (
-            <button type="button" className="btn btn-ghost" onClick={() => { setSeed(newSeed()); setTeamId(null); }}>
-              ↻ Generate a different league
-            </button>
-          )}
-          <div className="wizard-foot">
-            <span className="muted small">
-              {league.teams.length} teams · {league.players.filter((p) => p.teamId).length} rostered players · {seasonLabel(league.meta.season)}
-            </span>
-            <button type="button" className="btn btn-primary" onClick={() => setStep('team')}>
-              Next: choose a team
-            </button>
-          </div>
-        </div>
-      )}
 
       {step === 'team' && (
         <div className="wizard-body">
@@ -158,9 +167,9 @@ export function NewCareer() {
             </section>
           ))}
           <div className="wizard-foot sticky">
-            <button type="button" className="btn" onClick={() => setStep('league')}>
+            <a className="btn" href={href()}>
               Back
-            </button>
+            </a>
             <span className="muted small grow">{chosen ? `${teamName(chosen.team)}: ranked ${chosen.rank} of ${summaries.length}` : 'Pick a team to manage'}</span>
             <button type="button" className="btn btn-primary" disabled={!chosen} onClick={() => setStep('options')}>
               Next

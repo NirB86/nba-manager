@@ -503,3 +503,6 @@ button { font: inherit; color: inherit; }
 .mini-face .photo-figure svg { margin-top: 4px; }
 .wordmark { display: inline-flex; align-items: center; padding: 8px 14px; border-radius: 12px; background: #f4f6fb; max-width: 260px; }
 .wordmark img { max-height: 44px; max-width: 100%; object-fit: contain; }
+
+.league-card { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 20px; padding: 14px 16px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--border); }
+.league-card p { margin-top: 4px; }

@@ -14,9 +14,11 @@
     "import:fetch": "NODE_USE_ENV_PROXY=1 tsx tools/import-real/fetch.ts",
     "import:build": "tsx tools/import-real/build.ts",
     "import:images": "NODE_USE_ENV_PROXY=1 tsx tools/import-real/images.ts",
-    "import:images-more": "NODE_USE_ENV_PROXY=1 tsx tools/import-real/images-more.ts"
+    "import:images-more": "NODE_USE_ENV_PROXY=1 tsx tools/import-real/images-more.ts",
+    "import:publish": "NODE_USE_ENV_PROXY=1 tsx tools/import-real/publish.ts"
   },
   "dependencies": {
+    "@supabase/supabase-js": "2.118.0",
     "idb": "8.0.4",
     "react": "19.2.0",
     "react-dom": "19.2.0"

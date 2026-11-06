@@ -8,6 +8,9 @@ import { Home } from './ui/screens/Home';
 import { League, TeamPage } from './ui/screens/League';
 import { MainMenu } from './ui/screens/MainMenu';
 import { NewCareer } from './ui/screens/NewCareer';
+import { Account } from './ui/screens/Account';
+import { cachedLeague, withLatestImages } from './cloud/sync';
+import { putSave } from './storage/saves';
 import { PlayerPage } from './ui/screens/PlayerPage';
 import { Roster } from './ui/screens/Roster';
 import { More, Settings, Staff } from './ui/screens/StaffAndSettings';
@@ -16,6 +19,7 @@ import { BoxScore, Schedule } from './ui/screens/Season';
 export function App() {
   const path = useRoute();
   const [first] = path;
+  if (first === 'account') return <div className="arena"><Account /></div>;
   if (first === 'new') return <div className="arena"><NewCareer /></div>;
   if (first === 'c' && path[1]) return <Career saveId={path[1]} rest={path.slice(2)} />;
   return <div className="arena"><MainMenu /></div>;
@@ -28,7 +32,13 @@ function Career({ saveId, rest }: { saveId: string; rest: string[] }) {
     let live = true;
     setSave(undefined);
     loadSave(saveId)
-      .then((s) => live && setSave(s ?? null))
+      .then(async (s) => {
+        if (!s) return live && setSave(null);
+        // Pass new photos and logos from the latest downloaded league to this career.
+        const updated = withLatestImages(s, await cachedLeague());
+        if (updated !== s) await putSave(updated);
+        if (live) setSave(updated);
+      })
       .catch(() => live && setSave(null));
     return () => {
       live = false;

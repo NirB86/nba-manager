@@ -41,6 +41,8 @@ export interface SaveGame {
   inbox: InboxMessage[];
   league: LeagueFile;
   season: SeasonState;
+  /** Version of the downloaded NBA league whose photos and logos this save has. */
+  leagueVersion?: string;
 }
 
 export interface SaveSummary {
@@ -56,6 +58,7 @@ export interface SaveSummary {
 }
 
 interface Schema extends DBSchema {
+  kv: { key: string; value: unknown };
   saves: { key: string; value: SaveGame };
   summaries: { key: string; value: SaveSummary; indexes: { updatedAt: string } };
 }
@@ -63,11 +66,14 @@ interface Schema extends DBSchema {
 let dbPromise: Promise<IDBPDatabase<Schema>> | null = null;
 
 function db() {
-  dbPromise ??= openDB<Schema>('nba-manager', 1, {
-    upgrade(database) {
-      database.createObjectStore('saves', { keyPath: 'id' });
-      const summaries = database.createObjectStore('summaries', { keyPath: 'id' });
-      summaries.createIndex('updatedAt', 'updatedAt');
+  dbPromise ??= openDB<Schema>('nba-manager', 2, {
+    upgrade(database, oldVersion) {
+      if (oldVersion < 1) {
+        database.createObjectStore('saves', { keyPath: 'id' });
+        const summaries = database.createObjectStore('summaries', { keyPath: 'id' });
+        summaries.createIndex('updatedAt', 'updatedAt');
+      }
+      if (oldVersion < 2) database.createObjectStore('kv');
     },
   });
   return dbPromise;
@@ -90,6 +96,15 @@ function summarize(save: SaveGame): SaveSummary {
 
 export function newSaveId(): string {
   return `save-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+/** Small key-value store on the device (the downloaded league lives here). */
+export async function kvGet<T>(key: string): Promise<T | undefined> {
+  return (await (await db()).get('kv', key)) as T | undefined;
+}
+
+export async function kvSet(key: string, value: unknown): Promise<void> {
+  await (await db()).put('kv', value, key);
 }
 
 export async function listSaves(): Promise<SaveSummary[]> {
