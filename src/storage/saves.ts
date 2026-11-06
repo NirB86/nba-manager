@@ -3,10 +3,10 @@
 // same SaveGame objects, so this format is the contract for both.
 
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
-import { validateLeague, teamName, type LeagueFile } from '../engine';
+import { Rng, newSeason, newSeed, validateLeague, teamName, type LeagueFile, type SeasonState } from '../engine';
 
 export const SAVE_FORMAT = 'nbam-save';
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 
 export type Role = 'gm' | 'gm-coach';
 export type SimMode = 'watch' | 'quick' | 'ask';
@@ -40,6 +40,7 @@ export interface SaveGame {
   career: CareerSettings;
   inbox: InboxMessage[];
   league: LeagueFile;
+  season: SeasonState;
 }
 
 export interface SaveSummary {
@@ -96,8 +97,16 @@ export async function listSaves(): Promise<SaveSummary[]> {
   return all.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
 }
 
+/** Bring older saves up to the current format. */
+export function migrate(save: SaveGame): SaveGame {
+  let s = save;
+  if (!s.season) s = { ...s, season: newSeason(s.league, new Rng(newSeed())), version: SAVE_VERSION };
+  return s;
+}
+
 export async function loadSave(id: string): Promise<SaveGame | undefined> {
-  return (await db()).get('saves', id);
+  const save = await (await db()).get('saves', id);
+  return save ? migrate(save) : undefined;
 }
 
 export async function putSave(save: SaveGame): Promise<SaveGame> {
@@ -154,11 +163,11 @@ export async function importSaveFile(file: File): Promise<SaveGame> {
   }
   const check = validateLeague(save.league);
   if (!check.ok) throw new Error(`The save's league data is invalid: ${check.errors[0]}`);
-  const imported: SaveGame = {
+  const imported: SaveGame = migrate({
     ...(save as SaveGame),
     id: newSaveId(),
     inbox: save.inbox ?? [],
     name: `${save.name ?? 'Imported career'}`,
-  };
+  });
   return putSave(imported);
 }

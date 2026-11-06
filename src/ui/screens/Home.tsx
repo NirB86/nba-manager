@@ -1,5 +1,7 @@
 import { CAP_STATUS_LABEL, capStatus, fullName, playerAge, playerOverall, rosterOf, teamName, teamPayroll, teamRating } from '../../engine';
 import { ownerExpectation } from '../../game/career';
+import { dateLabel } from '../../game/advance';
+import { ContinueControls, SeasonCards, recordOf } from './Season';
 import { useCareer } from '../career-context';
 import { Card, Ovr, Pill, Stat } from '../components';
 import { money, ordinal, seasonLabel } from '../format';
@@ -36,21 +38,15 @@ export function Home({ messageId }: { messageId?: string }) {
   return (
     <>
       <PageHeader
-        title={`Welcome, GM`}
-        subtitle={`${teamName(team)} · ${seasonLabel(season)} preseason`}
-        actions={
-          <button className="btn btn-primary" type="button" disabled title="Game simulation arrives in the next update">
-            Continue ▸
-          </button>
-        }
+        title={teamName(team)}
+        subtitle={`${seasonLabel(season)} · ${dateLabel(save.season)}`}
       />
-      <div className="notice">
-        <strong>Early build.</strong> You can explore your roster, the league, contracts and staff. Playing the season (simulation) arrives in the next update.
-      </div>
+      <ContinueControls />
+      <SeasonCards />
 
       <div className="stats-row">
         <Stat label="Team rating" value={<Ovr value={teamRating(league, team.id)} label="Team rating" />} hint={`${ordinal(exp.rank)} of ${league.teams.length}`} />
-        <Stat label="Record" value="0-0" hint="Preseason" />
+        <Stat label="Record" value={recordOf(save, team.id)} hint={dateLabel(save.season)} />
         <Stat label="Payroll" value={money(payroll)} hint={CAP_STATUS_LABEL[status]} />
         <Stat label="Owner's goal" value={<span className="stat-text">{exp.goal}</span>} />
       </div>

@@ -1,5 +1,8 @@
 import {
   CAP_STATUS_LABEL,
+  Rng,
+  newSeason,
+  newSeed,
   capStatus,
   fullName,
   playerAge,
@@ -48,6 +51,7 @@ export function createCareer(league: LeagueFile, career: CareerSettings, name: s
     career,
     inbox: welcomeMessages(league, career),
     league,
+    season: newSeason(league, new Rng(newSeed())),
   };
 }
 

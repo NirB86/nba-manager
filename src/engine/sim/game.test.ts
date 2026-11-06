@@ -66,6 +66,12 @@ describe('simulateGame', () => {
       expect(g.home.score).not.toBe(g.away.score);
       const total = (side: GameResult['home']) => side.lines.reduce((s, l) => s + l.sec, 0);
       expect(total(g.home)).toBe(5 * (48 * 60 + g.overtimes * 300));
+      for (const l of [...g.home.lines, ...g.away.lines]) {
+        expect(l.fgm).toBeLessThanOrEqual(l.fga);
+        expect(l.tpm).toBeLessThanOrEqual(l.tpa);
+        expect(l.ftm).toBeLessThanOrEqual(l.fta);
+        expect(l.pts).toBe(2 * (l.fgm - l.tpm) + 3 * l.tpm + l.ftm);
+      }
       const pts = g.home.lines.reduce((s, l) => s + l.pts, 0);
       expect(pts).toBe(g.home.score);
     }

@@ -4,8 +4,9 @@ import { useCareer } from './career-context';
 import { TeamBadge } from './components';
 import { seasonLabel } from './format';
 import { href } from './router';
+import { dateLabel } from '../game/advance';
 
-type IconName = 'home' | 'roster' | 'league' | 'money' | 'staff' | 'settings' | 'more' | 'back';
+type IconName = 'home' | 'roster' | 'league' | 'money' | 'staff' | 'settings' | 'more' | 'back' | 'calendar';
 
 const PATHS: Record<IconName, string> = {
   home: 'M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z',
@@ -16,6 +17,7 @@ const PATHS: Record<IconName, string> = {
   settings: 'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zm7.4-3a7.4 7.4 0 0 0-.1-1.2l2-1.6-2-3.4-2.4 1a7.5 7.5 0 0 0-2-1.2L14.5 3h-4l-.4 2.6a7.5 7.5 0 0 0-2 1.2l-2.4-1-2 3.4 2 1.6a7.4 7.4 0 0 0 0 2.4l-2 1.6 2 3.4 2.4-1a7.5 7.5 0 0 0 2 1.2l.4 2.6h4l.4-2.6a7.5 7.5 0 0 0 2-1.2l2.4 1 2-3.4-2-1.6c.1-.4.1-.8.1-1.2z',
   more: 'M5 12h.01M12 12h.01M19 12h.01',
   back: 'M15 18l-6-6 6-6',
+  calendar: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4',
 };
 
 export function Icon({ name, size = 22 }: { name: IconName; size?: number }) {
@@ -36,6 +38,7 @@ interface NavItem {
 const NAV: NavItem[] = [
   { key: 'home', label: 'Home', icon: 'home', mobile: true },
   { key: 'roster', label: 'Roster', icon: 'roster', mobile: true },
+  { key: 'schedule', label: 'Schedule', icon: 'calendar', mobile: false },
   { key: 'league', label: 'League', icon: 'league', mobile: true },
   { key: 'finances', label: 'Finances', icon: 'money', mobile: true },
   { key: 'staff', label: 'Staff', icon: 'staff', mobile: false },
@@ -47,7 +50,7 @@ export function Shell({ section, children }: { section: string; children: ReactN
   const team = save.league.teams.find((t) => t.id === save.career.teamId);
   const unread = save.inbox.filter((m) => !m.read).length;
   const id = save.id;
-  const moreActive = section === 'staff' || section === 'settings' || section === 'more';
+  const moreActive = section === 'staff' || section === 'settings' || section === 'more' || section === 'schedule';
 
   return (
     <div className="shell">
@@ -61,7 +64,7 @@ export function Shell({ section, children }: { section: string; children: ReactN
             <TeamBadge team={team} size={44} />
             <div>
               <div className="sidebar-team-name">{teamName(team)}</div>
-              <div className="muted small">{seasonLabel(save.league.meta.season)} · Preseason</div>
+              <div className="muted small">{seasonLabel(save.league.meta.season)} · {dateLabel(save.season)}</div>
             </div>
           </div>
         )}
@@ -85,7 +88,7 @@ export function Shell({ section, children }: { section: string; children: ReactN
             <TeamBadge team={team} size={32} />
             <div className="topbar-text">
               <div className="topbar-team">{teamName(team)}</div>
-              <div className="muted small">{seasonLabel(save.league.meta.season)} · Preseason</div>
+              <div className="muted small">{seasonLabel(save.league.meta.season)} · {dateLabel(save.season)}</div>
             </div>
           </header>
         )}

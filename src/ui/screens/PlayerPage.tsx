@@ -5,6 +5,7 @@ import { AttrBar, Card, Ovr, Pill, Stars, TeamBadge } from '../components';
 import { height, money, ordinal, seasonLabel } from '../format';
 import { href } from '../router';
 import { PageHeader } from '../Shell';
+import { f1, pct, perGame } from './Season';
 
 export function PlayerPage({ playerId }: { playerId: string }) {
   const { save } = useCareer();
@@ -67,6 +68,8 @@ export function PlayerPage({ playerId }: { playerId: string }) {
           </div>
         </Card>
 
+        <SeasonStats playerId={p.id} />
+
         <Card title="Contract">
           {p.contract ? (
             <>
@@ -122,5 +125,56 @@ export function PlayerPage({ playerId }: { playerId: string }) {
         </Card>
       </div>
     </>
+  );
+}
+
+function SeasonStats({ playerId }: { playerId: string }) {
+  const { save } = useCareer();
+  const rows = (['regular', 'playoffs'] as const)
+    .map((k) => ({ k, t: save.season.stats[k][playerId] }))
+    .filter((r) => (r.t?.g ?? 0) > 0);
+  if (!rows.length) return null;
+  return (
+    <Card title={`${seasonLabel(save.season.year)} stats`}>
+      <div className="table-wrap">
+        <table className="table compact">
+          <thead>
+            <tr>
+              <th />
+              <th className="num">GP</th>
+              <th className="num">MIN</th>
+              <th className="num">PTS</th>
+              <th className="num">REB</th>
+              <th className="num">AST</th>
+              <th className="num hide-sm">STL</th>
+              <th className="num hide-sm">BLK</th>
+              <th className="num">FG%</th>
+              <th className="num hide-sm">3P%</th>
+              <th className="num hide-sm">FT%</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map(({ k, t }) => {
+              const s = perGame(t);
+              return (
+                <tr key={k}>
+                  <td>{k === 'regular' ? 'Season' : 'Playoffs'}</td>
+                  <td className="num">{s.g}</td>
+                  <td className="num">{f1(s.min)}</td>
+                  <td className="num"><strong>{f1(s.pts)}</strong></td>
+                  <td className="num">{f1(s.reb)}</td>
+                  <td className="num">{f1(s.ast)}</td>
+                  <td className="num hide-sm">{f1(s.stl)}</td>
+                  <td className="num hide-sm">{f1(s.blk)}</td>
+                  <td className="num">{pct(s.fgPct)}</td>
+                  <td className="num hide-sm">{pct(s.tpPct)}</td>
+                  <td className="num hide-sm">{pct(s.ftPct)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </Card>
   );
 }

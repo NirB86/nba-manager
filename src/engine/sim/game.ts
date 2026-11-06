@@ -184,13 +184,13 @@ function possession(rng: Rng, off: Side, def: Side, home: boolean): boolean {
   let makeP: number;
   let foulP: number;
   if (kind === 'rim') {
-    makeP = 0.585 + 0.011 * ((eff(shooter, 'inside') + eff(shooter, 'finishing')) / 2 - 10) - 0.009 * (def.avg('interiorD') - 10) + 0.003 * (s.strength - 10);
+    makeP = 0.58 + 0.011 * ((eff(shooter, 'inside') + eff(shooter, 'finishing')) / 2 - 10) - 0.009 * (def.avg('interiorD') - 10) + 0.003 * (s.strength - 10);
     foulP = 0.15 + 0.006 * (s.finishing - 10);
   } else if (kind === 'mid') {
     makeP = 0.37 + 0.012 * (eff(shooter, 'midRange') - 10) - 0.006 * (eff(defender, 'perimeterD') - 10);
     foulP = 0.045;
   } else {
-    makeP = 0.308 + 0.0115 * (eff(shooter, 'three') - 10) - 0.005 * (eff(defender, 'perimeterD') - 10);
+    makeP = 0.303 + 0.0115 * (eff(shooter, 'three') - 10) - 0.005 * (eff(defender, 'perimeterD') - 10);
     foulP = 0.015;
   }
   makeP = clamp(makeP + edge + off.form + 0.003 * (shooter.a.iq - 10), 0.15, 0.85);
@@ -200,6 +200,9 @@ function possession(rng: Rng, off: Side, def: Side, home: boolean): boolean {
     weightedPick(rng, def.court, (c) => (c === defender ? 3 : 1)).line.pf++;
     // Fouled on the shot: an and-one sometimes, otherwise free throws.
     if (rng.chance(makeP * 0.45)) {
+      // And-one: the basket counts as a field-goal attempt.
+      shooter.line.fga++;
+      if (kind === 'three') shooter.line.tpa++;
       made(rng, off, def, shooter, kind, points);
       freeThrows(rng, off, shooter, 1);
     } else {
@@ -216,8 +219,8 @@ function possession(rng: Rng, off: Side, def: Side, home: boolean): boolean {
   }
 
   // Missed: blocked sometimes, then a rebound.
-  if (kind !== 'three' && rng.chance(kind === 'rim' ? 0.3 + 0.02 * (def.avg('blocks') - 10) : 0.08)) {
-    weightedPick(rng, def.court, (c) => eff(c, 'blocks') ** 2.5).line.blk++;
+  if (kind !== 'three' && rng.chance(kind === 'rim' ? 0.36 + 0.02 * (def.avg('blocks') - 10) : 0.09)) {
+    weightedPick(rng, def.court, (c) => eff(c, 'blocks') ** 6).line.blk++;
   }
   const orbP = clamp(0.245 + 0.012 * (off.avg('rebounding') - def.avg('rebounding')), 0.12, 0.4);
   if (rng.chance(orbP)) {
@@ -231,7 +234,7 @@ function possession(rng: Rng, off: Side, def: Side, home: boolean): boolean {
 function usage(c: OnCourt): number {
   const scoring = (eff(c, 'inside') + eff(c, 'midRange') + eff(c, 'three') + eff(c, 'finishing')) / 4;
   // A star takes roughly a third of his team's shots while on the floor, as in the NBA.
-  return Math.exp(0.013 * (c.ovr - 60)) * (scoring / 10) * (0.7 + c.a.ballHandling / 30);
+  return Math.exp(0.013 * (c.ovr - 60)) * (scoring / 10) ** 0.7 * (0.75 + c.a.ballHandling / 40);
 }
 
 function made(rng: Rng, off: Side, def: Side, shooter: OnCourt, kind: ShotKind, points: number) {
@@ -241,7 +244,7 @@ function made(rng: Rng, off: Side, def: Side, shooter: OnCourt, kind: ShotKind, 
   const assistedP = kind === 'three' ? 0.8 : kind === 'mid' ? 0.45 : 0.55;
   if (rng.chance(assistedP)) {
     const mates = off.court.filter((c) => c !== shooter);
-    weightedPick(rng, mates, (c) => eff(c, 'passing') ** 2.2).line.ast++;
+    weightedPick(rng, mates, (c) => eff(c, 'passing') ** 3.5).line.ast++;
   }
 }
 
