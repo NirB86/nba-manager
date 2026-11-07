@@ -3,7 +3,7 @@
 // is protected by the storage bucket's sign-in rule, not by these values.
 
 export const CLOUD_CONFIG = {
-  url: '',
-  publishableKey: '',
+  url: 'https://ylumnqsxrlinzmjsjdpd.supabase.co',
+  publishableKey: 'sb_publishable_duE5fkzK184gRrr5_iSdYw_4zPuYZvO',
   bucket: 'leagues',
 };
