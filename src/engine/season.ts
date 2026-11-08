@@ -5,6 +5,7 @@
 import { Rng } from './random';
 import { simulateGame, type BoxLine, type GameResult } from './sim/game';
 import type { LeagueFile, Team } from './types';
+import type { MultiTrade } from './trade';
 
 export interface ScheduledGame {
   id: string;
@@ -53,6 +54,10 @@ export interface SeasonState {
   contractTalks?: { playerId: string; day: number }[];
   /** The mid-level exception has been used this season. */
   mleUsed?: boolean;
+  /** Trade offers AI teams sent the user. */
+  offers?: { id: string; fromTeam: string; deal: MultiTrade; day: number; expiresDay: number; status: 'open' | 'accepted' | 'declined' | 'expired' }[];
+  /** Latest rumors and AI-to-AI trades for the league wire, newest first. */
+  rumors?: string[];
 }
 
 export interface Highlight {

@@ -10,6 +10,7 @@ import { money } from '../format';
 import { href } from '../router';
 import { PageHeader } from '../Shell';
 import { GameRecap } from './GameRecap';
+import { OfferCard } from './OfferCard';
 import { recordOf, teamById } from './Season';
 
 /** Official headshots are transparent cut-outs: they can stand on a coloured panel. */
@@ -226,6 +227,7 @@ export function Home({ messageId }: { messageId?: string }) {
         <Card>
           <p className="message-body">{open.body}</p>
         </Card>
+        {open.offerId && <OfferCard offerId={open.offerId} />}
       </>
     );
   }

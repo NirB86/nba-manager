@@ -10,6 +10,8 @@ export function leagueWire(save: SaveGame): string[] {
   const player = (id: string) => league.players.find((p) => p.id === id);
   const items: string[] = [];
 
+  for (const r of (season.rumors ?? []).slice(0, 3)) items.push(r);
+
   if (season.phase === 'done' && season.champion) {
     items.push(`${team(season.champion)?.name ?? 'Champions'} win the title`);
   }
@@ -42,7 +44,7 @@ export function leagueWire(save: SaveGame): string[] {
     const favorites = teamSummaries(league).sort((a, b) => b.rating - a.rating).slice(0, 3).map((s) => s.team.name);
     items.push('Opening night is here', `Title favorites: ${favorites.join(', ')}`);
   }
-  return items.slice(0, 6);
+  return items.slice(0, 8);
 }
 
 export type Mood = 'Thrilled' | 'Pleased' | 'Patient' | 'Concerned' | 'Furious';

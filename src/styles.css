@@ -768,3 +768,11 @@ select.input { appearance: auto; }
 .recap .btn { background: #fff; }
 @media (max-width: 600px) { .recap-score { grid-template-columns: 1fr; } }
 .recap .btn-ghost { background: transparent; color: #fff; border: 2px solid #fff; padding: 4px 14px; }
+
+/* Trade offers in the inbox */
+.offer-card { border-top: 4px solid var(--red); }
+.offer-sides { display: grid; gap: 12px; margin-bottom: 8px; }
+@media (min-width: 700px) { .offer-sides { grid-template-columns: 1fr 1fr; } }
+.offer-sides ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 6px; }
+.offer-asset { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.offer-asset a { font-weight: 700; }

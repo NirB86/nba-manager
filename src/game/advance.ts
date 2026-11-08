@@ -3,6 +3,7 @@
 
 import { Rng, fullName, newSeed, simulateDay, standings, teamName, type ScheduledGame, type SeasonState, type Series } from '../engine';
 import type { InboxMessage, SaveGame } from '../storage/saves';
+import { weeklyMarket } from './market';
 
 export type AdvanceTarget = 'next-game' | 'week' | 'regular-end' | 'season-end';
 
@@ -75,8 +76,11 @@ export async function advance(original: SaveGame, target: AdvanceTarget, onProgr
   for (;;) {
     const phaseBefore = season.phase;
     const seriesBefore = season.series.length;
+    const dayBefore = season.day;
     const report = simulateDay(league, season, rng, (g) => isMine(g) || g.id.startsWith('finals'));
     steps++;
+    // Once a game week: offers, AI trades and rumors.
+    if (season.phase === 'regular' && season.day !== dayBefore && season.day % 7 === 0) weeklyMarket(save, rng);
     const playedMine = report.played.some((p) => isMine(p.game));
     if (report.phaseChanged) news(save, phaseBefore, seriesBefore);
     if (steps % 4 === 0) {

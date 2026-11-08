@@ -64,9 +64,13 @@ export function evaluateDeal(save: SaveGame, deal: MultiTrade): DealVerdict {
   const blocked = (save.season.declinedDeals ?? []).some((d) => d.key === dealKey(deal) && d.day === save.season.day);
   if (!deal.moves.length) return { check, answers: [], chance: 0, blocked, message: 'Add players or picks to build a deal.' };
   if (!check.valid) return { check, answers: [], chance: 0, blocked, message: check.problems[0] ?? 'This trade breaks the rules.' };
+  const key = dealKey(deal);
+  const ownOffer = (save.season.offers ?? []).find((o) => o.status === 'open' && o.expiresDay >= save.season.day && dealKey(o.deal) === key);
   const answers = deal.teams
     .filter((t) => t !== me)
     .map((teamId): TeamAnswer => {
+      // Their own open offer, unchanged: they already agreed to it.
+      if (ownOffer?.fromTeam === teamId) return { teamId, chance: 0.98, message: 'Their own offer: they will sign off on it.' };
       const chance = Math.max(0.02, Math.min(0.98, sigmoid(yesScore(save, check, teamId))));
       const strategy = teamStrategy(save.league, teamId);
       const wants = strategy === 'rebuild' ? 'young players or draft picks' : strategy === 'contend' ? 'players who help this season' : 'more value';
@@ -171,8 +175,9 @@ export function assetLabel(save: SaveGame, m: TradeMove): string {
   }
   const k = league.draftPicks.find((x) => x.id === m.id);
   if (!k) return 'a draft pick';
-  const via = k.originalTeamId !== k.ownerTeamId ? ` (via ${league.teams.find((t) => t.id === k.originalTeamId)?.abbrev})` : '';
-  return `the ${k.season} ${k.round === 1 ? '1st' : '2nd'}-round pick${via}`;
+  const owner = league.teams.find((t) => t.id === k.originalTeamId)?.name;
+  const whose = owner ? (owner.endsWith('s') ? `the ${owner}'` : `the ${owner}'s`) : 'a';
+  return `${whose} ${k.season} ${k.round === 1 ? '1st' : '2nd'}-round pick`;
 }
 
 /** Take the other teams' counter offer: they already agreed to it. */
@@ -215,5 +220,10 @@ export function completeDeal(original: SaveGame, deal: MultiTrade): SaveGame {
     read: false,
   });
   save.season.trades = [...(save.season.trades ?? []), { day: save.season.day, teams: deal.teams, sent, got }];
+  // Players in this deal are gone: any open offer involving them is settled.
+  const moved = new Set(deal.moves.map((m) => m.id));
+  for (const o of save.season.offers ?? []) {
+    if (o.status === 'open' && o.deal.moves.some((m) => moved.has(m.id))) o.status = dealKey(o.deal) === dealKey(deal) ? 'accepted' : 'expired';
+  }
   return save;
 }

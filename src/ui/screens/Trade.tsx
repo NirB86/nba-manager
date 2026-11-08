@@ -16,11 +16,21 @@ export function Trade({ teamId, playerId }: { teamId?: string; playerId?: string
   const me = save.career.teamId;
   const season = league.meta.season;
   const status = tradesOpen(save);
-  const firstPartner = teamId && teamId !== me ? teamId : null;
+  // From an offer in the inbox: start from the AI team's offer to counter it.
+  const fromOffer = teamId === 'offer' ? save.season.offers?.find((o) => o.id === playerId) : undefined;
+  const firstPartner = fromOffer ? fromOffer.fromTeam : teamId && teamId !== me && teamId !== 'offer' ? teamId : null;
   const [partners, setPartners] = useState<string[]>(firstPartner ? [firstPartner] : []);
   // From a player page: their player (with the team) or one of ours (partner chosen next).
   const [moves, setMoves] = useState<TradeMove[]>(
-    playerId ? (firstPartner ? [{ kind: 'player', id: playerId, from: firstPartner, to: me }] : teamId === me ? [{ kind: 'player', id: playerId, from: me, to: me }] : []) : [],
+    fromOffer
+      ? fromOffer.deal.moves
+      : playerId
+        ? firstPartner
+          ? [{ kind: 'player', id: playerId, from: firstPartner, to: me }]
+          : teamId === me
+            ? [{ kind: 'player', id: playerId, from: me, to: me }]
+            : []
+        : [],
   );
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
   const [counter, setCounter] = useState<Counter | null>(null);

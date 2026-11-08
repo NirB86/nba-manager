@@ -28,6 +28,8 @@ export interface InboxMessage {
   body: string;
   date: string;
   read: boolean;
+  /** A trade offer this message is about (season.offers). */
+  offerId?: string;
 }
 
 export interface SaveGame {
