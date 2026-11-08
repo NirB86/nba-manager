@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { LiveGame, Rng, newSeed, type GameResult, type LiveState, type PlayEvent, type Player, type Tactics } from '../../engine';
+import { LiveGame, Rng, newSeed, type GameResult, type LiveState, type PlayEvent, type Player, type Tactics, type Team } from '../../engine';
 import type { SaveGame } from '../../storage/saves';
 import { TeamBadge } from '../components';
 
@@ -112,6 +112,87 @@ function framesFor(e: PlayEvent, evIndex: number, prevScore: [number, number], n
   return out;
 }
 
+/** Room around the court for the apron (sidelines and baselines). */
+const APRON = 40;
+
+/** Light or dark text for a background colour. */
+function inkOn(hex: string): string {
+  const n = parseInt(hex.replace('#', '').slice(0, 6), 16);
+  const [r, g, b] = [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  return 0.299 * r + 0.587 * g + 0.114 * b > 160 ? '#111111' : '#ffffff';
+}
+
+/**
+ * The home team's floor: maple with their colours in the keys and the
+ * apron, their logo at centre court, the arena name on one sideline and
+ * the team name on the other.
+ */
+function HomeCourt({ team }: { team: Team }) {
+  const main = team.colors.primary;
+  const second = team.colors.secondary;
+  const ink = inkOn(main);
+  const label = { fontFamily: 'Barlow Condensed, Arial Narrow, sans-serif', fontWeight: 900, fontStyle: 'italic' as const, letterSpacing: '0.12em' };
+  return (
+    <g aria-hidden="true">
+      <defs>
+        <pattern id="cast-wood" width="48" height={H} patternUnits="userSpaceOnUse">
+          <rect width="48" height={H} fill="#e9d2a4" />
+          <rect x="46" width="2" height={H} fill="#dcc08a" opacity=".6" />
+          <rect x="22" width="1" height={H} fill="#f3e0ba" opacity=".7" />
+        </pattern>
+        <clipPath id="cast-center">
+          <circle cx={W / 2} cy={H / 2} r="58" />
+        </clipPath>
+      </defs>
+      <rect x={-APRON} y={-APRON} width={W + 2 * APRON} height={H + 2 * APRON} fill={main} />
+      <text x={W / 2} y={-APRON / 2 + 9} textAnchor="middle" fontSize="24" fill={ink} style={label}>
+        {(team.arena ?? '').replace(/\s*\(.*\)$/, '').toUpperCase()}
+      </text>
+      <text x={W / 2} y={H + APRON / 2 + 9} textAnchor="middle" fontSize="24" fill={ink} style={label}>
+        {`${team.city} ${team.name}`.toUpperCase()}
+      </text>
+      <rect width={W} height={H} fill="url(#cast-wood)" />
+      {/* Painted keys and the centre circle in the home colours. */}
+      <rect x="4" y="170" width="190" height="160" fill={main} opacity=".88" />
+      <rect x="746" y="170" width="190" height="160" fill={main} opacity=".88" />
+      <circle cx={W / 2} cy={H / 2} r="60" fill={second} opacity=".95" />
+      {team.logo ? (
+        <image href={team.logo.url} x={W / 2 - 52} y={H / 2 - 52} width="104" height="104" preserveAspectRatio="xMidYMid meet" clipPath="url(#cast-center)" />
+      ) : (
+        <text x={W / 2} y={H / 2 + 14} textAnchor="middle" fontSize="40" fill={inkOn(second)} style={label}>
+          {team.abbrev}
+        </text>
+      )}
+      <g fill="none" stroke="#ffffff" strokeWidth="3">
+        <rect x="4" y="4" width="932" height="492" />
+        <line x1={W / 2} y1="4" x2={W / 2} y2="496" />
+        <circle cx={W / 2} cy={H / 2} r="60" />
+        <rect x="4" y="170" width="190" height="160" />
+        <rect x="746" y="170" width="190" height="160" />
+        <circle cx="194" cy="250" r="60" />
+        <circle cx="746" cy="250" r="60" />
+        <path d="M4 30 H144 A238 238 0 0 1 144 470 H4" />
+        <path d="M936 30 H796 A238 238 0 0 0 796 470 H936" />
+      </g>
+      {/* Team name in each end zone, along the baseline. */}
+      <text transform={`translate(${-APRON / 2 + 8} ${H / 2}) rotate(-90)`} textAnchor="middle" fontSize="22" fill={ink} style={label}>
+        {team.name.toUpperCase()}
+      </text>
+      <text transform={`translate(${W + APRON / 2 - 8} ${H / 2}) rotate(90)`} textAnchor="middle" fontSize="22" fill={ink} style={label}>
+        {team.name.toUpperCase()}
+      </text>
+      <g stroke="#ffffff" strokeWidth="4" fill="none">
+        <line x1="40" y1="220" x2="40" y2="280" />
+        <line x1="900" y1="220" x2="900" y2="280" />
+      </g>
+      <g stroke="#e85d1a" strokeWidth="4" fill="none">
+        <circle cx="56" cy="250" r="9" />
+        <circle cx="884" cy="250" r="9" />
+      </g>
+    </g>
+  );
+}
+
 interface Alert {
   key: string;
   text: string;
@@ -158,6 +239,7 @@ export function GameCast({ save, homeId, awayId, mode, onFinish }: { save: SaveG
   const [alert, setAlert] = useState<Alert | null>(null);
   const seenAlerts = useRef(new Set<string>());
   const [note, setNote] = useState<string | null>(null);
+  const [tab, setTab] = useState<'pbp' | 'box'>('pbp');
   // Coaching confirmations show briefly, then the play-by-play takes over again.
   useEffect(() => {
     if (!note) return;
@@ -341,30 +423,13 @@ export function GameCast({ save, homeId, awayId, mode, onFinish }: { save: SaveG
 
       <div className="cast-main">
         <div className="cast-court-wrap">
-          <svg className="cast-court" viewBox={narrow ? `${right ? W / 2 - 20 : 0} 0 ${W / 2 + 20} ${H}` : `0 0 ${W} ${H}`} role="img" aria-label="Court">
+          <svg className="cast-court" viewBox={narrow ? `${right ? W / 2 - 20 : -APRON} ${-APRON} ${W / 2 + 20 + APRON} ${H + 2 * APRON}` : `${-APRON} ${-APRON} ${W + 2 * APRON} ${H + 2 * APRON}`} role="img" aria-label="Court">
             <defs>
               <clipPath id="cast-round" clipPathUnits="objectBoundingBox">
                 <circle cx=".5" cy=".5" r=".5" />
               </clipPath>
             </defs>
-            <rect width={W} height={H} fill="#efdcb6" />
-            <g fill="none" stroke="#3b3b3b" strokeWidth="2.5" opacity=".7">
-              <rect x="4" y="4" width="932" height="492" />
-              <line x1="470" y1="4" x2="470" y2="496" />
-              <circle cx="470" cy="250" r="60" />
-              <rect x="4" y="170" width="190" height="160" fill={colors.away} fillOpacity=".12" />
-              <rect x="746" y="170" width="190" height="160" fill={colors.home} fillOpacity=".12" />
-              <circle cx="194" cy="250" r="60" />
-              <circle cx="746" cy="250" r="60" />
-              <path d="M4 30 H144 A238 238 0 0 1 144 470 H4" />
-              <path d="M936 30 H796 A238 238 0 0 0 796 470 H936" />
-            </g>
-            <g stroke="#d50a0a" strokeWidth="3" fill="none">
-              <line x1="40" y1="220" x2="40" y2="280" />
-              <line x1="900" y1="220" x2="900" y2="280" />
-              <circle cx="56" cy="250" r="9" />
-              <circle cx="884" cy="250" r="9" />
-            </g>
+            <HomeCourt team={home} />
             {tokens.map(({ id, side }, k) => {
               const p = players.get(id);
               const spot = f?.pos[id] ?? { x: side === 'home' ? 600 + (k % 5) * 50 : 340 - (k % 5) * 50, y: 120 + (k % 5) * 60 };
@@ -466,7 +531,71 @@ export function GameCast({ save, homeId, awayId, mode, onFinish }: { save: SaveG
             </div>
           )}
 
-          <h3>Play-by-play</h3>
+          <div className="cast-tabs" role="tablist">
+            <button type="button" role="tab" aria-selected={tab === 'pbp'} className={tab === 'pbp' ? 'on' : ''} onClick={() => setTab('pbp')}>
+              Play-by-play
+            </button>
+            <button type="button" role="tab" aria-selected={tab === 'box'} className={tab === 'box' ? 'on' : ''} onClick={() => setTab('box')}>
+              Box score
+            </button>
+          </div>
+          {tab === 'box' && (
+            <div className="cast-box">
+              {(['away', 'home'] as const).map((side) => {
+                const t = side === 'home' ? home : away;
+                const rows = [...state[side].players].filter((p) => p.sec > 0 || p.onCourt).sort((a, b) => Number(b.onCourt) - Number(a.onCourt) || b.pts - a.pts);
+                const tot = rows.reduce((acc, p) => ({ pts: acc.pts + p.pts, reb: acc.reb + p.reb, ast: acc.ast + p.ast, fgm: acc.fgm + p.fgm, fga: acc.fga + p.fga, tpm: acc.tpm + p.tpm, tpa: acc.tpa + p.tpa }), { pts: 0, reb: 0, ast: 0, fgm: 0, fga: 0, tpm: 0, tpa: 0 });
+                return (
+                  <table key={side} className="cast-box-table">
+                    <caption style={{ borderColor: colors[side] }}>{t.name}</caption>
+                    <thead>
+                      <tr>
+                        <th>Player</th>
+                        <th>MIN</th>
+                        <th>PTS</th>
+                        <th>REB</th>
+                        <th>AST</th>
+                        <th>FG</th>
+                        <th>3P</th>
+                        <th>PF</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((p) => {
+                        const pl = players.get(p.id);
+                        return (
+                          <tr key={p.id} className={p.onCourt ? 'court' : ''}>
+                            <td>{pl ? `${pl.firstName.charAt(0)}. ${pl.lastName}` : p.id}</td>
+                            <td>{Math.round(p.sec / 60)}</td>
+                            <td><strong>{p.pts}</strong></td>
+                            <td>{p.reb}</td>
+                            <td>{p.ast}</td>
+                            <td>{p.fgm}-{p.fga}</td>
+                            <td>{p.tpm}-{p.tpa}</td>
+                            <td className={p.fouls >= 5 ? 'bad' : ''}>{p.fouls}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot>
+                      <tr>
+                        <td>Team</td>
+                        <td />
+                        <td><strong>{tot.pts}</strong></td>
+                        <td>{tot.reb}</td>
+                        <td>{tot.ast}</td>
+                        <td>{tot.fgm}-{tot.fga}</td>
+                        <td>{tot.tpm}-{tot.tpa}</td>
+                        <td />
+                      </tr>
+                    </tfoot>
+                  </table>
+                );
+              })}
+            </div>
+          )}
+          {tab === 'pbp' && <h3 className="sr-only">Play-by-play</h3>}
+          {tab === 'pbp' && (
           <ol className="cast-feed">
             {feed.map((x) => (
               <li key={x.key} className={x.scored ? 'scored' : ''}>
@@ -475,6 +604,7 @@ export function GameCast({ save, homeId, awayId, mode, onFinish }: { save: SaveG
               </li>
             ))}
           </ol>
+          )}
         </aside>
       </div>
       {atEnd && (

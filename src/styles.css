@@ -962,3 +962,18 @@ select.input { appearance: auto; }
 .photo-stage .wizard-body.narrow > :not(.chosen-team) { background: rgba(255, 255, 255, 0.96); padding: 12px 14px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25); }
 .photo-stage .wizard-body.narrow > .wizard-foot { background: rgba(255, 255, 255, 0.96); }
 .photo-stage .wizard-body.narrow > p { margin: 0; }
+
+/* Live game: box score tab */
+.cast-tabs { display: grid; grid-template-columns: 1fr 1fr; margin: 4px 0 8px; border: 2px solid var(--black); }
+.cast-tabs button { min-height: 38px; border: 0; background: #fff; font-family: var(--label); font-weight: 800; font-size: 14px; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; }
+.cast-tabs button.on { background: var(--black); color: #fff; }
+.cast-box { display: grid; gap: 12px; overflow-x: auto; }
+.cast-box-table { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+.cast-box-table caption { text-align: left; padding: 4px 0 4px 8px; border-left: 5px solid; font-family: var(--display); font-weight: 900; font-style: italic; font-size: 16px; text-transform: uppercase; }
+.cast-box-table th { padding: 4px 3px; background: var(--black); color: #fff; font-family: var(--label); font-weight: 800; font-size: 11px; letter-spacing: 0.06em; text-align: right; }
+.cast-box-table th:first-child, .cast-box-table td:first-child { text-align: left; white-space: nowrap; }
+.cast-box-table td { padding: 4px 3px; border-bottom: 1px solid #e6e8ec; text-align: right; }
+.cast-box-table tr.court td:first-child { font-weight: 700; box-shadow: inset 3px 0 0 #0a8f4e; padding-left: 6px; }
+.cast-box-table td.bad { color: var(--red); font-weight: 700; }
+.cast-box-table tfoot td { font-weight: 700; border-top: 2px solid var(--black); }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

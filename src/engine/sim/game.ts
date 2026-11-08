@@ -357,6 +357,16 @@ export interface LivePlayer {
   reb: number;
   ast: number;
   sec: number;
+  fgm: number;
+  fga: number;
+  tpm: number;
+  tpa: number;
+  ftm: number;
+  fta: number;
+  stl: number;
+  blk: number;
+  tov: number;
+  pm: number;
 }
 
 export interface LiveState {
@@ -500,7 +510,26 @@ export class LiveGame {
 
   state(): LiveState {
     const view = (s: Side) => ({
-      players: s.roster.map((c) => ({ id: c.p.id, onCourt: s.court.includes(c), energy: c.energy, fouls: c.line.pf, pts: c.line.pts, reb: c.line.orb + c.line.drb, ast: c.line.ast, sec: c.line.sec })),
+      players: s.roster.map((c) => ({
+        id: c.p.id,
+        onCourt: s.court.includes(c),
+        energy: c.energy,
+        fouls: c.line.pf,
+        pts: c.line.pts,
+        reb: c.line.orb + c.line.drb,
+        ast: c.line.ast,
+        sec: c.line.sec,
+        fgm: c.line.fgm,
+        fga: c.line.fga,
+        tpm: c.line.tpm,
+        tpa: c.line.tpa,
+        ftm: c.line.ftm,
+        fta: c.line.fta,
+        stl: c.line.stl,
+        blk: c.line.blk,
+        tov: c.line.tov,
+        pm: c.line.pm,
+      })),
       timeouts: s.timeouts,
       tactics: s.tactics,
       autoSubs: s.autoSubs,
