@@ -127,7 +127,7 @@ function inkOn(hex: string): string {
  * apron, their logo at centre court, the arena name on one sideline and
  * the team name on the other.
  */
-function HomeCourt({ team }: { team: Team }) {
+function HomeCourt({ team, textX = W / 2, small = false }: { team: Team; textX?: number; small?: boolean }) {
   const main = team.colors.primary;
   const second = team.colors.secondary;
   const ink = inkOn(main);
@@ -145,10 +145,10 @@ function HomeCourt({ team }: { team: Team }) {
         </clipPath>
       </defs>
       <rect x={-APRON} y={-APRON} width={W + 2 * APRON} height={H + 2 * APRON} fill={main} />
-      <text x={W / 2} y={-APRON / 2 + 9} textAnchor="middle" fontSize="24" fill={ink} style={label}>
+      <text x={textX} y={-APRON / 2 + 9} textAnchor="middle" fontSize={small ? 20 : 24} fill={ink} style={label}>
         {(team.arena ?? '').replace(/\s*\(.*\)$/, '').toUpperCase()}
       </text>
-      <text x={W / 2} y={H + APRON / 2 + 9} textAnchor="middle" fontSize="24" fill={ink} style={label}>
+      <text x={textX} y={H + APRON / 2 + 9} textAnchor="middle" fontSize={small ? 20 : 24} fill={ink} style={label}>
         {`${team.city} ${team.name}`.toUpperCase()}
       </text>
       <rect width={W} height={H} fill="url(#cast-wood)" />
@@ -429,7 +429,8 @@ export function GameCast({ save, homeId, awayId, mode, onFinish }: { save: SaveG
                 <circle cx=".5" cy=".5" r=".5" />
               </clipPath>
             </defs>
-            <HomeCourt team={home} />
+            {/* On phones only one half shows: centre the sideline text on that half. */}
+            <HomeCourt team={home} small={narrow} textX={narrow ? (right ? (W / 2 - 20 + W + APRON) / 2 : (-APRON + W / 2 + 20) / 2) : W / 2} />
             {tokens.map(({ id, side }, k) => {
               const p = players.get(id);
               const spot = f?.pos[id] ?? { x: side === 'home' ? 600 + (k % 5) * 50 : 340 - (k % 5) * 50, y: 120 + (k % 5) * 60 };
