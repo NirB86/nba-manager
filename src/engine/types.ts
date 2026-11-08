@@ -171,6 +171,8 @@ export interface Staff {
     scouting: number;
   };
   contract: { salary: number; endSeason: number } | null;
+  /** Optional (format v2): a free-licensed photo. */
+  photo?: ImageCredit;
 }
 
 export interface DraftPick {

@@ -542,6 +542,21 @@ for (const t of teams) {
 }
 for (let i = 0; i < 15; i++) staff.push(makeStaff(null, rng.pick(['AC', 'SCOUT', 'DEV', 'MED'] as const)));
 
+// Real birth year, nationality and photo for head coaches, if coaches.ts has run.
+const coachesFile = join(cacheDir, 'coaches.json');
+if (existsSync(coachesFile)) {
+  const coaches = JSON.parse(readFileSync(coachesFile, 'utf8')) as Record<string, { birthYear?: number; country?: string; photo?: Staff['photo'] }>;
+  for (const s of staff) {
+    if (s.role !== 'HC') continue;
+    const info = coaches[`${s.firstName} ${s.lastName}`];
+    if (!info) continue;
+    if (info.birthYear) s.born.year = info.birthYear;
+    if (info.country) s.born.country = info.country;
+    if (info.photo) s.photo = info.photo;
+  }
+  console.log(`Coaches: ${staff.filter((s) => s.role === 'HC' && s.photo).length} head coach photos`);
+}
+
 // Future picks: who owns traded picks isn't on these pages, so every team starts with its own.
 const draftPicks: DraftPick[] = [];
 for (let s = END_YEAR; s < END_YEAR + 7; s++) {

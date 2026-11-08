@@ -15,7 +15,8 @@
     "import:build": "tsx tools/import-real/build.ts",
     "import:images": "NODE_USE_ENV_PROXY=1 tsx tools/import-real/images.ts",
     "import:images-more": "NODE_USE_ENV_PROXY=1 tsx tools/import-real/images-more.ts",
-    "import:publish": "NODE_USE_ENV_PROXY=1 tsx tools/import-real/publish.ts"
+    "import:publish": "NODE_USE_ENV_PROXY=1 tsx tools/import-real/publish.ts",
+    "import:coaches": "NODE_USE_ENV_PROXY=1 tsx tools/import-real/coaches.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.118.0",

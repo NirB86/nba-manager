@@ -40,12 +40,17 @@ export function withLatestImages(save: SaveGame, latest: CachedLeague | undefine
   const src: LeagueFile = latest.league;
   const photos = new Map(src.players.filter((p) => p.photo).map((p) => [p.id, p.photo]));
   const teams = new Map(src.teams.map((t) => [t.id, t]));
+  const staffById = new Map(src.staff.map((m) => [m.id, m]));
   return {
     ...save,
     leagueVersion: latest.manifest.version,
     league: {
       ...save.league,
       players: save.league.players.map((p) => (photos.get(p.id) ? { ...p, photo: photos.get(p.id) } : p)),
+      staff: save.league.staff.map((m) => {
+        const s = staffById.get(m.id);
+        return s && s.role === 'HC' && s.firstName === m.firstName && s.lastName === m.lastName ? { ...m, born: s.born, photo: s.photo ?? m.photo } : m;
+      }),
       teams: save.league.teams.map((t) => {
         const s = teams.get(t.id);
         return s ? { ...t, logo: s.logo ?? t.logo, wordmark: s.wordmark ?? t.wordmark } : t;

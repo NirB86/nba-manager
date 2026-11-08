@@ -13,7 +13,7 @@ import { cachedLeague, withLatestImages } from './cloud/sync';
 import { putSave } from './storage/saves';
 import { PlayerPage } from './ui/screens/PlayerPage';
 import { Roster } from './ui/screens/Roster';
-import { More, Settings, Staff } from './ui/screens/StaffAndSettings';
+import { More, Settings, Staff, StaffPage } from './ui/screens/StaffAndSettings';
 import { BoxScore, Schedule } from './ui/screens/Season';
 
 export function App() {
@@ -68,7 +68,8 @@ function Career({ saveId, rest }: { saveId: string; rest: string[] }) {
         {section === 'league' && <League />}
         {section === 'team' && arg && <TeamPage teamId={arg} />}
         {section === 'finances' && <Finances />}
-        {section === 'staff' && <Staff />}
+        {section === 'staff' && !arg && <Staff />}
+        {section === 'staff' && arg && <StaffPage staffId={arg} />}
         {section === 'settings' && <Settings />}
         {section === 'more' && <More />}
         {section === 'schedule' && <Schedule />}

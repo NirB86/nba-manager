@@ -65,7 +65,7 @@ The overall rating is not stored; the game computes it from attributes and posit
 
 ## staff
 
-`{ id, firstName, lastName, teamId (or null), role: "HC" | "AC" | "SCOUT" | "MED" | "DEV", born, ratings: { tactics, development, motivation, judgment, medical, scouting } (1-20), contract: null or { salary, endSeason } }`
+`{ id, firstName, lastName, teamId (or null), role: "HC" | "AC" | "SCOUT" | "MED" | "DEV", born, ratings: { tactics, development, motivation, judgment, medical, scouting } (1-20), contract: null or { salary, endSeason }, photo? }` (`photo` optional, v2, same shape as a player's)
 
 ## draftPicks
 

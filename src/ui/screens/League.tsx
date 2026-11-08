@@ -115,7 +115,7 @@ export function TeamPage({ teamId }: { teamId: string }) {
       <div className="stats-row">
         <Stat label="Team rating" value={<Ovr value={summary?.rating ?? 0} />} />
         <Stat label="Payroll" value={money(summary?.payroll ?? 0)} hint={summary ? CAP_STATUS_LABEL[capStatus(league.settings, summary.payroll)] : ''} />
-        <Stat label="Head coach" value={<span className="stat-text">{hc ? `${hc.firstName} ${hc.lastName}` : 'Vacant'}</span>} />
+        <Stat label="Head coach" value={<span className="stat-text">{hc ? <a className="row-link" href={href('c', save.id, 'staff', hc.id)}>{`${hc.firstName} ${hc.lastName}`}</a> : 'Vacant'}</span>} />
         <Stat label="First-round picks" value={picks.length} hint="Next 7 drafts" />
       </div>
       <RosterTable save={save} players={roster} />
