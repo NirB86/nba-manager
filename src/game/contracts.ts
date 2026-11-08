@@ -4,6 +4,7 @@
 
 import { Rng, buildContract, capStatus, fullName, marketSalary, maxSalaryShare, playerAge, playerOverall, projectedCba, rosterOf, teamPayroll, teamStrategy, type Contract, type Player } from '../engine';
 import type { SaveGame } from '../storage/saves';
+import { morale } from './morale';
 import { potentialRange } from './scouting';
 
 /** Non-taxpayer mid-level exception, as a share of the cap (about 14.1M on a 154.6M cap). */
@@ -161,7 +162,9 @@ export function evaluateOffer(save: SaveGame, p: Player, n: Negotiation, offer: 
   const strategy = teamStrategy(save.league, save.career.teamId);
   const situation = (strategy === 'contend' ? 0.03 : strategy === 'rebuild' ? -0.03 : 0) + (n.kind === 'extension' ? (p.personality.loyalty - 10) * 0.006 : -0.02);
   const difficulty = { easy: 0.04, normal: 0, hard: -0.05 }[save.career.difficulty];
-  const score = byYear - 1 + yearsFit + optionFit + situation + difficulty;
+  // Happy players re-sign more easily; unhappy ones want out.
+  const mood = n.kind === 'extension' ? morale(save, p).score * 0.005 : 0;
+  const score = byYear - 1 + yearsFit + optionFit + situation + difficulty + mood;
   const chance = Math.max(0.02, Math.min(0.98, 1 / (1 + Math.exp(-score / 0.045))));
   const message =
     chance >= 0.85 ? 'His agent is ready to sign.' : chance >= 0.6 ? 'Close: he is leaning yes.' : chance >= 0.35 ? 'On the fence.' : chance >= 0.12 ? 'Well short of what he wants.' : 'His agent laughs at that offer.';

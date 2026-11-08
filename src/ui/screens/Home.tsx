@@ -2,9 +2,10 @@ import { useState } from 'react';
 import { CAP_STATUS_LABEL, capStatus, displayRating, rosterOf, playerOverall, teamPayroll, teamRating, type ImageCredit, type Player, type ScheduledGame } from '../../engine';
 import { advance, lastUserGame, nextUserGame, type AdvanceTarget, type Progress } from '../../game/advance';
 import { conferenceRank, leagueWire, ownerMood } from '../../game/news';
+import { morale, MORALE_LABEL, type MoraleLevel } from '../../game/morale';
 import type { SaveGame } from '../../storage/saves';
 import { useCareer } from '../career-context';
-import { Card, Pill, PlayerPhoto, TeamBadge, LeagueLogo } from '../components';
+import { Card, MoodPill, Pill, PlayerPhoto, TeamBadge, LeagueLogo } from '../components';
 import { money } from '../format';
 import { href } from '../router';
 import { PageHeader } from '../Shell';
@@ -135,6 +136,40 @@ function MatchupBoard() {
           <a href={href('c', save.id, 'game', last.id)}>Last game box score ›</a>
           <a href={href('c', save.id, 'schedule')}>Schedule ›</a>
         </div>
+      )}
+    </section>
+  );
+}
+
+/** Team mood at a glance, and who is unhappy. */
+function LockerRoom() {
+  const { save } = useCareer();
+  const players = rosterOf(save.league, save.career.teamId).filter((p) => p.contract?.kind !== 'two-way');
+  const moods = players.map((p) => ({ p, m: morale(save, p) }));
+  const order: MoraleLevel[] = ['thrilled', 'happy', 'content', 'unhappy', 'angry'];
+  const count = (l: MoraleLevel) => moods.filter((x) => x.m.level === l).length;
+  const upset = moods.filter((x) => x.m.level === 'unhappy' || x.m.level === 'angry');
+  return (
+    <section className="locker">
+      <div className="section-head">
+        <h2>Locker room</h2>
+      </div>
+      <div className="locker-bar" role="img" aria-label={order.map((l) => `${count(l)} ${MORALE_LABEL[l].toLowerCase()}`).join(', ')}>
+        {order.map((l) => (count(l) ? <span key={l} className={`mood-${l}`} style={{ flex: count(l) }} /> : null))}
+      </div>
+      <div className="locker-legend">
+        {order.map((l) => (count(l) ? <MoodPill key={l} level={l} label={`${count(l)} ${MORALE_LABEL[l]}`} /> : null))}
+      </div>
+      {upset.length > 0 && (
+        <ul className="locker-upset">
+          {upset.map(({ p, m }) => (
+            <li key={p.id}>
+              <a href={href('c', save.id, 'player', p.id)}>
+                <strong>{p.firstName} {p.lastName}</strong> · {m.reasons.find((r) => r.effect < 0)?.text ?? MORALE_LABEL[m.level]}
+              </a>
+            </li>
+          ))}
+        </ul>
       )}
     </section>
   );
@@ -273,6 +308,8 @@ export function Home({ messageId }: { messageId?: string }) {
           </a>
         ))}
       </div>
+
+      <LockerRoom />
 
       <Card title="Inbox" action={<Pill tone="accent">{save.inbox.filter((m) => !m.read).length} new</Pill>}>
         <ul className="inbox">

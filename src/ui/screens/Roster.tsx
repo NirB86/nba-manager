@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { displayRating, fullName, playerAge, playerOverall, salaryIn, type Player } from '../../engine';
+import { morale, MORALE_LABEL } from '../../game/morale';
 import { potentialRange } from '../../game/scouting';
 import type { SaveGame } from '../../storage/saves';
 import { useCareer } from '../career-context';
-import { Ovr, Pill, PlayerPhoto, Segmented } from '../components';
+import { MoodPill, Ovr, Pill, PlayerPhoto, Segmented } from '../components';
 import { f1, pct, perGame } from './Season';
 import { height, money, seasonLabel } from '../format';
 import { href } from '../router';
@@ -16,7 +17,7 @@ const potLabel = ([lo, hi]: [number, number]) => {
 };
 const POS_ORDER = { PG: 0, SG: 1, SF: 2, PF: 3, C: 4 } as const;
 
-export function RosterTable({ save, players }: { save: SaveGame; players: Player[] }) {
+export function RosterTable({ save, players, showMood = false }: { save: SaveGame; players: Player[]; showMood?: boolean }) {
   const [sort, setSort] = useState<SortKey>('ovr');
   const [view, setView] = useState<'ratings' | 'stats'>('ratings');
   const league = save.league;
@@ -88,6 +89,7 @@ export function RosterTable({ save, players }: { save: SaveGame; players: Player
             {th('pot', 'POT', 'num hide-sm')}
             {th('salary', 'Salary', 'num')}
             <th className="num hide-sm">Thru</th>
+            {showMood && <th>Mood</th>}
           </tr>
           )}
         </thead>
@@ -135,6 +137,14 @@ export function RosterTable({ save, players }: { save: SaveGame; players: Player
                 <td className="num muted hide-sm">{potLabel(pot(p))}</td>
                 <td className="num">{p.contract ? money(salaryIn(p, season)) : '—'}</td>
                 <td className="num muted hide-sm">{last ? seasonLabel(last) : '—'}</td>
+                {showMood && (
+                  <td>
+                    {(() => {
+                      const m = morale(save, p);
+                      return <MoodPill level={m.level} label={MORALE_LABEL[m.level]} />;
+                    })()}
+                  </td>
+                )}
               </tr>
             );
           })}
@@ -155,7 +165,7 @@ export function Roster() {
         title="Roster"
         subtitle={`${players.length - twoWay} of ${save.league.settings.rosterMax} roster spots${twoWay ? ` + ${twoWay} two-way` : ''} · tap a column to sort, a player for details`}
       />
-      <RosterTable save={save} players={players} />
+      <RosterTable save={save} players={players} showMood />
     </>
   );
 }

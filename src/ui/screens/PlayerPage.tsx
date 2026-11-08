@@ -2,9 +2,10 @@ import { ATTRIBUTE_GROUPS, displayRating, fullName, playerAge, playerOverall, sa
 import { personalityTraits, potentialRange } from '../../game/scouting';
 import { useState } from 'react';
 import { negotiation } from '../../game/contracts';
+import { morale, MORALE_LABEL } from '../../game/morale';
 import { useCareer } from '../career-context';
 import { ContractOffer } from './ContractOffer';
-import { Card, ImageCreditLine, Pill, PlayerPhoto } from '../components';
+import { Card, ImageCreditLine, MoodPill, Pill, PlayerPhoto } from '../components';
 import { attrTone, height, money, ordinal, seasonLabel } from '../format';
 import { href } from '../router';
 import { PageHeader } from '../Shell';
@@ -157,6 +158,23 @@ export function PlayerPage({ playerId }: { playerId: string }) {
               <p className="muted">No contract. Any team can sign this player.</p>
             )}
           </Card>
+          {p.teamId && (() => {
+            const m = morale(save, p);
+            return (
+              <Card title="Morale" action={<MoodPill level={m.level} label={MORALE_LABEL[m.level]} />} className="morale-card">
+                <div className="morale-meter" aria-hidden="true">
+                  <span style={{ left: `${((m.score + 10) / 20) * 100}%` }} />
+                </div>
+                <ul className="morale-reasons">
+                  {m.reasons.map((r) => (
+                    <li key={r.text} className={r.effect > 0.2 ? 'up' : r.effect < -0.2 ? 'down' : ''}>
+                      {r.text}
+                    </li>
+                  ))}
+                </ul>
+              </Card>
+            );
+          })()}
           <Card title="Profile">
             <dl className="facts">
               <dt>Position</dt>

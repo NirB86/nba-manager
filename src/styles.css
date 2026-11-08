@@ -700,3 +700,26 @@ select.input { appearance: auto; }
 .save-item.has-photo .muted { color: rgba(255, 255, 255, 0.85); }
 .save-item.has-photo .save-name { color: #fff; }
 .save-item.has-photo .btn { background: #fff; }
+
+/* Morale */
+.mood { display: inline-flex; align-items: center; gap: 6px; font-family: var(--label); font-weight: 800; font-size: 13px; text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
+.mood-dot { width: 10px; height: 10px; border-radius: 50%; background: currentColor; flex: none; }
+.mood-thrilled { color: #0a8f4e; }
+.mood-happy { color: #3aa76d; }
+.mood-content { color: #6b7280; }
+.mood-unhappy { color: #d97706; }
+.mood-angry { color: var(--red); }
+@media (max-width: 600px) { table .mood-text { display: none; } }
+.morale-meter { position: relative; height: 10px; margin: 4px 0 14px; background: linear-gradient(90deg, var(--red), #d97706 30%, #9ca3af 50%, #3aa76d 70%, #0a8f4e); transform: skewX(-14deg); }
+.morale-meter span { position: absolute; top: -5px; width: 6px; height: 20px; margin-left: -3px; background: var(--black); }
+.morale-reasons { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+.morale-reasons li.up::marker { color: #0a8f4e; }
+.morale-reasons li.down::marker { color: var(--red); }
+.morale-reasons li.down { font-weight: 600; }
+.locker { margin-bottom: 16px; }
+.locker-bar { display: flex; height: 12px; gap: 2px; margin-bottom: 8px; transform: skewX(-14deg); }
+.locker-bar > span { background: currentColor; }
+.locker-legend { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.locker-upset { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 4px; }
+.locker-upset li { padding: 8px 10px; background: #fff; border-left: 4px solid var(--red); font-size: 14px; }
+.locker-upset a { color: inherit; font-weight: 400; }

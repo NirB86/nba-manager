@@ -23,6 +23,16 @@ export function DraftMark({ logo, year }: { logo?: ImageCredit; year: number }) 
   );
 }
 
+/** Morale badge: a coloured dot and, on wider screens, the word. */
+export function MoodPill({ level, label }: { level: 'thrilled' | 'happy' | 'content' | 'unhappy' | 'angry'; label: string }) {
+  return (
+    <span className={`mood mood-${level}`} title={`Morale: ${label}`}>
+      <span className="mood-dot" aria-hidden="true" />
+      <span className="mood-text">{label}</span>
+    </span>
+  );
+}
+
 export function TeamBadge({ team, size = 40 }: { team: Pick<Team, 'abbrev' | 'colors'> & { logo?: ImageCredit }; size?: number }) {
   const [broken, setBroken] = useState(false);
   if (team.logo && !broken) {
