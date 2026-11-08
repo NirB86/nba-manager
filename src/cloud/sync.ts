@@ -34,11 +34,14 @@ export async function syncLeague(): Promise<SyncResult> {
   }
 }
 
-/** Copy photos and logos from the latest league into a career, matching by id. */
+/** Copy photos, logos and (same season only) ratings from the latest league into a career, by id. */
 export function withLatestImages(save: SaveGame, latest: CachedLeague | undefined): SaveGame {
   if (!latest || save.league.meta.source !== 'real' || save.leagueVersion === latest.manifest.version) return save;
   const src: LeagueFile = latest.league;
   const photos = new Map(src.players.filter((p) => p.photo).map((p) => [p.id, p.photo]));
+  // Re-rated players: only while the career is still in the file's season, so no development is lost.
+  const sameSeason = save.league.meta.season === src.meta.season;
+  const rated = new Map(src.players.map((p) => [p.id, p]));
   const teams = new Map(src.teams.map((t) => [t.id, t]));
   const staffById = new Map(src.staff.map((m) => [m.id, m]));
   return {
@@ -47,7 +50,11 @@ export function withLatestImages(save: SaveGame, latest: CachedLeague | undefine
     league: {
       ...save.league,
       meta: { ...save.league.meta, logo: src.meta.logo ?? save.league.meta.logo, draftLogo: src.meta.draftLogo ?? save.league.meta.draftLogo },
-      players: save.league.players.map((p) => (photos.get(p.id) ? { ...p, photo: photos.get(p.id) } : p)),
+      players: save.league.players.map((p) => {
+        const r = sameSeason ? rated.get(p.id) : undefined;
+        const withRatings = r ? { ...p, attributes: r.attributes, potential: r.potential } : p;
+        return photos.get(p.id) ? { ...withRatings, photo: photos.get(p.id) } : withRatings;
+      }),
       staff: save.league.staff.map((m) => {
         const s = staffById.get(m.id);
         return s && s.role === 'HC' && s.firstName === m.firstName && s.lastName === m.lastName ? { ...m, born: s.born, photo: s.photo ?? m.photo } : m;

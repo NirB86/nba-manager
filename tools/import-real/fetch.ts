@@ -20,6 +20,9 @@ export function pagesFor(endYear: number): string[] {
     `/leagues/NBA_${endYear}_per_game.html`,
     `/leagues/NBA_${endYear}_advanced.html`,
     `/contracts/salary-cap-history.html`,
+    // The season before last: a fallback for players who missed most of last season.
+    `/leagues/NBA_${prev - 1}_per_game.html`,
+    `/leagues/NBA_${prev - 1}_advanced.html`,
   ];
   for (const t of REAL_TEAMS) {
     pages.push(`/teams/${t.bref}/${endYear}.html`, `/contracts/${t.bref}.html`);

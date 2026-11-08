@@ -142,12 +142,28 @@ export const HEIGHT_CM: Record<Position, [number, number]> = {
 };
 
 /**
- * Rating as shown to the player, on the familiar 2K-style scale: a typical
- * rotation player about 72-80, starters 80-86, stars 88-97. The simulation
- * keeps using the internal value, so only the numbers on screen change.
+ * Internal overall -> rating on screen. Fitted so a real league lands on the
+ * familiar 2K spread: the best player ~98, top 10 ~93+, top 50 ~86, a typical
+ * rotation player 77-82, the end of the bench ~65-70.
+ */
+const DISPLAY_CURVE: [number, number][] = [
+  [20, 45], [45, 65], [51, 69], [54, 71], [59, 74], [66, 77], [69, 79],
+  [72, 82], [78, 86], [82, 89], [87, 93], [90, 95], [93, 98], [100, 99],
+];
+
+/**
+ * Rating as shown to the player, on the 2K-style scale. The simulation keeps
+ * using the internal value, so only the numbers on screen change.
  */
 export function displayRating(internal: number): number {
-  return clamp(Math.round(internal * 0.81 + 19.75), 40, 99);
+  const c = DISPLAY_CURVE;
+  if (internal <= c[0]![0]) return clamp(Math.round(c[0]![1] - (c[0]![0] - internal)), 40, 99);
+  for (let i = 1; i < c.length; i++) {
+    const [x1, y1] = c[i]!;
+    const [x0, y0] = c[i - 1]!;
+    if (internal <= x1) return clamp(Math.round(y0 + ((internal - x0) / (x1 - x0)) * (y1 - y0)), 40, 99);
+  }
+  return 99;
 }
 
 /** Star rating (0.5-5) for UI display, FM style. */

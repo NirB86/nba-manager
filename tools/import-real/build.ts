@@ -110,17 +110,34 @@ function loadSeason(year: number, withShooting: boolean): Map<string, Season> {
 
 const prevStats = loadSeason(PREV, true);
 const curStats = loadSeason(END_YEAR, false);
+const olderStats = (() => {
+  try {
+    return loadSeason(PREV - 1, false);
+  } catch {
+    console.warn('season before last not cached: injured players will rate lower');
+    return new Map<string, Season>();
+  }
+})();
 
-/** Minutes-weighted blend of a stat across last season and this one. */
+/** Below this many recent minutes, the season before last fills in (injuries). */
+const FULL_SAMPLE = 1800;
+/** How much of the older season counts, given a player's recent minutes. */
+function olderWeight(id: string): number {
+  const recent = (prevStats.get(id)?.mp ?? 0) + (curStats.get(id)?.mp ?? 0);
+  return recent >= FULL_SAMPLE ? 0 : 0.8 * (1 - recent / FULL_SAMPLE);
+}
+
+/** Minutes-weighted blend of a stat across recent seasons. */
 function blend(id: string, get: (s: Season) => number | null): { value: number | null; weight: number } {
   let sum = 0;
   let w = 0;
-  for (const s of [prevStats.get(id), curStats.get(id)]) {
-    if (!s || s.mp <= 0) continue;
+  const older = olderWeight(id);
+  for (const [s, k] of [[olderStats.get(id), older], [prevStats.get(id), 1], [curStats.get(id), 1]] as const) {
+    if (!s || s.mp <= 0 || k <= 0) continue;
     const v = get(s);
     if (v === null || !Number.isFinite(v)) continue;
-    sum += v * s.mp;
-    w += s.mp;
+    sum += v * s.mp * k;
+    w += s.mp * k;
   }
   return { value: w ? sum / w : null, weight: w };
 }
@@ -280,7 +297,7 @@ function metricsFor(b: Bio): Metrics {
     const v = pg(k).value;
     return v !== null && mpg > 0 ? (v / mpg) * 36 : null;
   };
-  const minutes = (prevStats.get(id)?.mp ?? 0) + (curStats.get(id)?.mp ?? 0);
+  const minutes = (prevStats.get(id)?.mp ?? 0) + (curStats.get(id)?.mp ?? 0) + (olderStats.get(id)?.mp ?? 0) * olderWeight(id);
   const fga36 = per36('fga_per_g') ?? 0;
   const fg3a36 = per36('fg3a_per_g') ?? 0;
   const fta36 = per36('fta_per_g') ?? 0;
@@ -325,6 +342,7 @@ function metricsFor(b: Bio): Metrics {
     obpm: shrink(adv('obpm').value, minutes, -2.5, 700),
     dbpm: shrink(adv('dbpm').value, minutes, -0.8, 700),
     bpm: shrink(adv('bpm').value, minutes, -3, 700),
+    ppg: shrink(pg('pts_per_g').value, minutes, 8, 700),
     ts: shrink(adv('ts_pct').value, attemptsSeason, 0.53, 200),
     height: b.heightIn,
     weight: b.weightLb,
@@ -376,7 +394,9 @@ const metrics = new Map(people.map((b) => [b.id, metricsFor(b)]));
 const pool = people.filter((b) => (metrics.get(b.id)?.minutes ?? 0) >= 400);
 const sortedOf = (key: string, list = pool) => list.map((b) => metrics.get(b.id)?.[key] ?? 0).sort((a, z) => a - z);
 const metricKeys = [...new Set(Object.values(RECIPES).flatMap((r) => r.map(([k]) => k))), 'impact'];
-for (const m of metrics.values()) m.impact = m.bpm + 0.12 * (m.mpg - 20);
+// Impact: box plus-minus and minutes, plus scoring load, which 2K-style
+// ratings reward heavily (a 26-point scorer is a star even with a modest BPM).
+for (const m of metrics.values()) m.impact = 0.5 * m.bpm + 0.12 * (m.mpg - 20) + 0.38 * (m.ppg - 12);
 const sorted = new Map(metricKeys.map((k) => [k, sortedOf(k)]));
 
 function composite(m: Metrics, key: AttributeKey): number {

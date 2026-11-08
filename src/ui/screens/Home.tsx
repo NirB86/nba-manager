@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CAP_STATUS_LABEL, capStatus, displayRating, rosterOf, playerOverall, teamPayroll, teamRating, type ScheduledGame } from '../../engine';
+import { CAP_STATUS_LABEL, capStatus, displayRating, rosterOf, playerOverall, teamPayroll, teamRating, type ImageCredit, type Player, type ScheduledGame } from '../../engine';
 import { advance, lastUserGame, nextUserGame, type AdvanceTarget, type Progress } from '../../game/advance';
 import { conferenceRank, leagueWire, ownerMood } from '../../game/news';
 import type { SaveGame } from '../../storage/saves';
@@ -9,6 +9,14 @@ import { money } from '../format';
 import { href } from '../router';
 import { PageHeader } from '../Shell';
 import { recordOf, teamById } from './Season';
+
+/** Official headshots are transparent cut-outs: they can stand on a coloured panel. */
+const isCutout = (photo?: ImageCredit) => photo?.source === 'NBA.com';
+
+/** The team's best player, for the matchup board. */
+function starOf(save: SaveGame, teamId: string): Player | undefined {
+  return rosterOf(save.league, teamId).sort((a, b) => playerOverall(b) - playerOverall(a))[0];
+}
 
 const ROUND = ['Play-in', 'First round', 'Conference semis', 'Conference finals', 'NBA Finals'];
 
@@ -44,6 +52,18 @@ function MatchupBoard() {
     }
   };
 
+  /** Big faded logo and the star player's cut-out behind each half of the board. */
+  const art = (teamId: string, right: boolean) => {
+    const t = teamById(save, teamId);
+    const star = starOf(save, teamId);
+    return (
+      <>
+        {t?.logo && <img className={`matchup-watermark ${right ? 'right' : 'left'}`} src={t.logo.url} alt="" />}
+        {star && isCutout(star.photo) && <img className={`matchup-star ${right ? 'right' : 'left'}`} src={star.photo!.url} alt={`${star.firstName} ${star.lastName}`} />}
+      </>
+    );
+  };
+
   const side = (teamId: string, right: boolean, score?: number) => {
     const t = teamById(save, teamId);
     if (!t) return null;
@@ -71,6 +91,8 @@ function MatchupBoard() {
       </div>
       {game && (
         <div className="matchup-board" style={style}>
+          {art(game.away, false)}
+          {art(game.home, true)}
           {side(game.away, false, next ? undefined : game.as)}
           <span className="matchup-vs">{next ? '@' : 'FINAL'}</span>
           {side(game.home, true, next ? undefined : game.hs)}
@@ -226,16 +248,28 @@ export function Home({ messageId }: { messageId?: string }) {
           Full roster ›
         </a>
       </div>
-      <div className="lineup">
+      <div className="lineup-cards">
         {five.map((p) => (
-          <a key={p.id} className="lineup-row" href={href('c', save.id, 'player', p.id)}>
-            <span className="lineup-num">{p.jersey}</span>
-            <span className="lineup-face">
-              <PlayerPhoto photo={p.photo} number={p.jersey} colors={team.colors} />
+          <a key={p.id} className="lineup-card" href={href('c', save.id, 'player', p.id)}>
+            <span className="lc-art">
+              <span className="lc-num" aria-hidden="true">{p.jersey}</span>
+              {team.logo && <img className="lc-logo" src={team.logo.url} alt="" />}
+              {isCutout(p.photo) ? (
+                <img className="lc-cutout" src={p.photo!.url} alt="" loading="lazy" />
+              ) : (
+                <span className="lc-face">
+                  <PlayerPhoto photo={p.photo} number={p.jersey} colors={team.colors} />
+                </span>
+              )}
+              <span className="lc-ovr">{displayRating(playerOverall(p))}</span>
             </span>
-            <span className="lineup-name">{`${p.firstName} ${p.lastName}`}</span>
-            <span className="lineup-pos">{p.position}</span>
-            <span className="lineup-ovr">{displayRating(playerOverall(p))}</span>
+            <span className="lc-name">
+              <small>{p.firstName}</small>
+              {p.lastName}
+            </span>
+            <span className="lc-pos">
+              {p.position} · #{p.jersey}
+            </span>
           </a>
         ))}
       </div>
