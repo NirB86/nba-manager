@@ -669,12 +669,17 @@ select.input { appearance: auto; }
 .menu-live .menu-hero .muted { color: rgba(255, 255, 255, 0.82); }
 .menu-live .menu-hero .btn:not(.btn-primary) { background: #fff; }
 .menu-league-logo { height: 64px; width: auto; padding: 6px 14px; background: var(--black); border: 1px solid rgba(255, 255, 255, 0.15); transform: skewX(-8deg); }
-.hero-stars { position: absolute; right: -40px; bottom: 0; height: 78%; display: flex; align-items: flex-end; z-index: -1; opacity: 0.55; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 35%); mask-image: linear-gradient(90deg, transparent 0, #000 35%); }
-.hero-stars img { height: calc(100% - var(--i) * 6%); width: auto; margin-left: -70px; filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.6)); }
+.hero-stars { position: absolute; right: 8px; bottom: 0; height: 62%; display: flex; align-items: flex-end; z-index: -2; pointer-events: none; opacity: 0.6; }
+/* Head-and-shoulders portraits: the face is never cut, the arms fade out at the sides. */
+.hero-stars img { height: 100%; width: auto; aspect-ratio: 0.62; object-fit: cover; object-position: 50% 0; margin-left: -22px; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 16%, #000 84%, transparent 100%); mask-image: linear-gradient(90deg, transparent 0, #000 16%, #000 84%, transparent 100%); filter: drop-shadow(0 6px 16px rgba(0, 0, 0, 0.6)); }
+.hero-stars img:first-child { margin-left: 0; }
+.hero-stars img:nth-child(n + 3) { display: none; }
+.menu-live .menu-hero::before { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, rgba(11, 11, 13, 0.85) 0%, rgba(11, 11, 13, 0.55) 45%, transparent 75%); pointer-events: none; }
 @media (min-width: 760px) {
   .menu-live .menu-hero { margin: 0; padding: 32px 32px 28px; min-height: 380px; }
-  .hero-stars { right: -20px; height: 92%; opacity: 0.95; }
-  .hero-stars img { margin-left: -110px; }
+  .hero-stars { right: 16px; height: 90%; opacity: 1; }
+  .hero-stars img { margin-left: -36px; }
+  .hero-stars img:nth-child(3) { display: block; }
 }
 .logo-strip { overflow: hidden; margin: 0 -16px; padding: 12px 0; background: var(--black); border-top: 3px solid var(--red); }
 .logo-track { display: flex; gap: 22px; width: max-content; animation: ticker 60s linear infinite; }
@@ -792,3 +797,8 @@ select.input { appearance: auto; }
 .draft-board li.mine { background: color-mix(in srgb, var(--red) 12%, #fff); border-left: 4px solid var(--red); }
 .draft-no { width: 28px; font-family: var(--display); font-weight: 900; font-style: italic; font-size: 18px; text-align: right; }
 @media (min-width: 1000px) { .draft-grid { grid-template-columns: 1.6fr 1fr; } }
+/* Star cut-outs never spill past their half of the board, whatever its width. */
+.matchup-star { max-width: calc(50% - 12px); object-fit: contain; object-position: bottom; }
+.matchup-star.left { object-position: right bottom; }
+.matchup-star.right { object-position: left bottom; }
+@media (min-width: 900px) { .matchup-star { height: min(240px, 90%); } .matchup-star.left { margin-right: 24px; } .matchup-star.right { margin-left: 24px; } .matchup-star { max-width: calc(50% - 36px); } }

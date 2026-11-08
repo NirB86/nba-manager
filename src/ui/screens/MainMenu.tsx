@@ -147,7 +147,7 @@ function HeroStars({ league }: { league: LeagueFile }) {
   const stars = league.players
     .filter((p) => p.teamId && p.photo?.source === 'NBA.com')
     .sort((a, b) => playerOverall(b) - playerOverall(a))
-    .slice(0, 5);
+    .slice(0, 3);
   if (!stars.length) return null;
   return (
     <div className="hero-stars" aria-hidden="true">
