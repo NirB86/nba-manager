@@ -18,7 +18,7 @@ export function TeamBadge({ team, size = 40 }: { team: Pick<Team, 'abbrev' | 'co
     <svg className="crest" width={size} height={Math.round(size * 1.15)} viewBox="0 0 40 46" aria-hidden="true">
       <path d="M20 1.5 L37.5 7.5 V22 C37.5 33.5 30 40.5 20 44.5 C10 40.5 2.5 33.5 2.5 22 V7.5 Z" fill={primary} stroke={secondary} strokeWidth="2.5" />
       <path d="M20 6 L33 10.5 V22 C33 30.5 27.5 36 20 39.5" fill="none" stroke={secondary} strokeOpacity="0.35" strokeWidth="1" />
-      <text x="20" y="27.5" textAnchor="middle" fontFamily="Anton, Impact, sans-serif" fontSize={text} fill={secondary} letterSpacing="0.3">
+      <text x="20" y="27.5" textAnchor="middle" fontFamily="Barlow Condensed, Arial Narrow, sans-serif" fontWeight="800" fontSize={text + 1} fill={secondary}>
         {team.abbrev}
       </text>
     </svg>
@@ -60,7 +60,7 @@ export function PlayerFigure({ number, colors, size = 104, tone = '#2b3550' }: {
       <path d="M28 106 L30 70 Q34 58 46 53 Q60 70 74 53 Q86 58 90 70 L92 106 Z" fill={colors.secondary} />
       <path d="M46 53 Q60 70 74 53" fill="none" stroke={colors.primary} strokeWidth="3" />
       <path d="M30 70 Q34 58 46 53 M74 53 Q86 58 90 70" fill="none" stroke={colors.primary} strokeWidth="3" />
-      <text x="60" y="97" textAnchor="middle" fontFamily="Anton, Impact, sans-serif" fontSize="24" fill={colors.primary}>
+      <text x="60" y="97" textAnchor="middle" fontFamily="Barlow Condensed, Arial Narrow, sans-serif" fontWeight="900" fontStyle="italic" fontSize="26" fill={colors.primary}>
         {number}
       </text>
     </svg>

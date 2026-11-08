@@ -24,30 +24,27 @@ function mix(hex: string, with_: string, amount: number): string {
 }
 
 export interface TeamTheme {
-  /** Deep team color used for glows and panels. */
+  /** Team primary color: banners, number boxes, split boards. */
   team: string;
-  /** Bright highlight color: buttons, active tabs, key numbers. */
-  accent: string;
-  /** Text color on top of the accent. */
-  accentInk: string;
+  /** Team secondary color: text on the primary, trims. */
+  team2: string;
+  /** Text color that reads on the primary. */
+  teamInk: string;
 }
 
-export const DEFAULT_THEME: TeamTheme = { team: '#1e3a8a', accent: '#ff9f1c', accentInk: '#0b1226' };
+export const DEFAULT_THEME: TeamTheme = { team: '#1d428a', team2: '#ffc72c', teamInk: '#ffffff' };
 
 export function teamTheme(team: Pick<Team, 'colors'> | undefined): TeamTheme {
   if (!team) return DEFAULT_THEME;
   const { primary, secondary } = team.colors;
-  // The darker color becomes the glow, the brighter one the accent.
-  const [deep, bright] = luminance(primary) <= luminance(secondary) ? [primary, secondary] : [secondary, primary];
-  let accent = bright;
-  // Make sure the accent reads on a dark arena background.
-  for (let i = 0; i < 6 && luminance(accent) < 0.28; i++) accent = mix(accent, '#ffffff', 0.25);
-  // A near-black team color would give no glow: lift it a little.
-  let glow = deep;
-  if (luminance(glow) < 0.012) glow = mix(glow, accent, 0.25);
-  return { team: glow, accent, accentInk: luminance(accent) > 0.45 ? '#0b1226' : '#ffffff' };
+  // A secondary too close to the primary is unreadable on it: fall back to white or black.
+  const contrast = Math.abs(luminance(primary) - luminance(secondary));
+  const team2 = contrast > 0.25 ? secondary : luminance(primary) > 0.4 ? '#0a0a0a' : '#ffffff';
+  return { team: primary, team2, teamInk: luminance(primary) > 0.45 ? '#0a0a0a' : '#ffffff' };
 }
 
 export function themeStyle(t: TeamTheme): Record<string, string> {
-  return { '--team': t.team, '--accent': t.accent, '--accent-ink': t.accentInk };
+  return { '--team': t.team, '--team2': t.team2, '--team-ink': t.teamInk };
 }
+
+export { mix };
