@@ -3,6 +3,7 @@ import { deleteSave, exportSave, importSaveFile, listSaves, loadSave, type SaveS
 import { playerOverall, type LeagueFile } from '../../engine';
 import { TeamBadge } from '../components';
 import { MusicButton } from '../MusicControls';
+import { ChampionshipTrophy } from '../Trophy';
 import { cloudConfigured } from '../../cloud/cloud';
 import { cachedLeague, syncLeague, type SyncResult } from '../../cloud/sync';
 import type { CachedLeague } from '../../cloud/cloud';
@@ -61,7 +62,7 @@ export function MainMenu() {
   return (
     <div className={`menu ${league ? 'menu-live' : ''}`}>
       <div className="menu-hero">
-        {league && <HeroStars league={league.league} />}
+        {league && <HeroWall league={league.league} />}
         {league?.league.meta.logo ? (
           <img className="menu-league-logo" src={league.league.meta.logo.url} alt="NBA" />
         ) : (
@@ -148,19 +149,22 @@ export function MainMenu() {
   );
 }
 
-/** The league's best players as cut-outs, standing along the hero banner. */
-function HeroStars({ league }: { league: LeagueFile }) {
-  const stars = league.players
+/** A dimmed wall of the league's players behind the hero, and the trophy in front. */
+function HeroWall({ league }: { league: LeagueFile }) {
+  const faces = league.players
     .filter((p) => p.teamId && p.photo?.source === 'NBA.com')
     .sort((a, b) => playerOverall(b) - playerOverall(a))
-    .slice(0, 5);
-  if (!stars.length) return null;
+    .slice(0, 220);
+  if (!faces.length) return null;
   return (
-    <div className="hero-stars" aria-hidden="true">
-      {stars.map((p, i) => (
-        <img key={p.id} src={p.photo!.url} alt="" style={{ ['--i' as string]: i }} />
-      ))}
-    </div>
+    <>
+      <div className="hero-wall" aria-hidden="true">
+        {faces.map((p) => (
+          <img key={p.id} src={p.photo!.url} alt="" loading="lazy" />
+        ))}
+      </div>
+      <ChampionshipTrophy className="hero-trophy" />
+    </>
   );
 }
 
