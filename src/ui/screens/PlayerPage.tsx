@@ -46,7 +46,7 @@ export function PlayerPage({ playerId }: { playerId: string }) {
           {p.jersey}
         </span>
         <div className="spot-photo">
-          <PlayerPhoto photo={p.photo} number={p.jersey} colors={colors} />
+          <PlayerPhoto photo={p.photo} number={p.jersey} colors={colors} frame="portrait" boxAspect={1.25} />
         </div>
         <div className="spot-straps">
           <span className="spot-tag">{mine ? 'Player spotlight' : team ? 'Scouting target' : 'Free agent'}</span>

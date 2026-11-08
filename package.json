@@ -16,7 +16,9 @@
     "import:images": "NODE_USE_ENV_PROXY=1 tsx tools/import-real/images.ts",
     "import:images-more": "NODE_USE_ENV_PROXY=1 tsx tools/import-real/images-more.ts",
     "import:publish": "NODE_USE_ENV_PROXY=1 tsx tools/import-real/publish.ts",
-    "import:coaches": "NODE_USE_ENV_PROXY=1 tsx tools/import-real/coaches.ts"
+    "import:coaches": "NODE_USE_ENV_PROXY=1 tsx tools/import-real/coaches.ts",
+    "import:faces": "NODE_USE_ENV_PROXY=1 tsx tools/import-real/faces.ts",
+    "import:images-nc": "NODE_USE_ENV_PROXY=1 tsx tools/import-real/images-nc.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.118.0",
@@ -28,6 +30,7 @@
     "@types/react": "19.2.2",
     "@types/react-dom": "19.2.2",
     "@vitejs/plugin-react": "5.1.0",
+    "@vladmandic/face-api": "1.7.15",
     "node-html-parser": "9.0.5",
     "tsx": "4.23.15",
     "typescript": "5.9.3",

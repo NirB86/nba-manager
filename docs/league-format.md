@@ -59,7 +59,7 @@ All money in US dollars.
 | `contract` | `null` or `{ years: [{ season, salary }], option: null or { season, type: "player" or "team" }, kind: "standard", "rookie", "two-way", "minimum" or "max", noTrade, signedSeason }` |
 | `draft` | `null` (undrafted) or `{ season, round, pick, teamId }` |
 | `experience` | Seasons played before the current one |
-| `photo` | Optional (v2): `{ url, credit, license, source, sourceUrl }` for a free-licensed photo; `url` must be https |
+| `photo` | Optional (v2): `{ url, credit, license, source, sourceUrl, focus?, nonCommercial? }` for a free-licensed photo; `url` must be https. `focus` = `{ x, y, w, aspect }`: eye-line centre and face width as fractions of the image, and image height/width, used to frame headshots |
 
 The overall rating is not stored; the game computes it from attributes and position.
 

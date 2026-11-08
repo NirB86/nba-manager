@@ -67,6 +67,10 @@ export interface ImageCredit {
   license: string;
   source: string;
   sourceUrl: string;
+  /** Where the face is (fractions of width/height), so displays can frame a headshot. */
+  focus?: { x: number; y: number; w: number; aspect: number };
+  /** Licensed for non-commercial use only (CC BY-NC / BY-NC-SA). */
+  nonCommercial?: boolean;
 }
 
 export interface Team {

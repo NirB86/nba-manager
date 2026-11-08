@@ -121,6 +121,7 @@ export function More() {
     { key: 'schedule', label: 'Schedule', icon: 'calendar' as const },
     { key: 'staff', label: 'Staff', icon: 'staff' as const },
     { key: 'settings', label: 'Settings', icon: 'settings' as const },
+    { key: 'credits', label: 'Photo credits', icon: 'staff' as const },
   ];
   return (
     <>
@@ -190,6 +191,9 @@ function ImagesCard() {
         <button className="btn" type="button" onClick={() => input.current?.click()}>
           Add photos from league file
         </button>
+        <a className="btn" href={href('c', save.id, 'credits')}>
+          Photo credits
+        </a>
         <input
           ref={input}
           type="file"
@@ -369,6 +373,59 @@ export function StaffPage({ staffId }: { staffId: string }) {
         </div>
       </div>
       <ImageCreditLine label="Photo" image={s.photo} />
+    </>
+  );
+}
+
+/** Every photo and logo in this career with the credit its license asks for. */
+export function Credits() {
+  const { save } = useCareer();
+  const { league } = save;
+  const teamOf = (id: string | null) => league.teams.find((t) => t.id === id);
+  const rows = [
+    ...league.teams.flatMap((t) => [
+      t.logo ? { key: `${t.id}-logo`, who: `${teamName(t)} logo`, image: t.logo } : null,
+      t.wordmark ? { key: `${t.id}-wm`, who: `${teamName(t)} wordmark`, image: t.wordmark } : null,
+    ]),
+    ...league.staff.map((m) => (m.photo ? { key: m.id, who: `${fullName(m)} (${ROLE_LABEL[m.role].toLowerCase()})`, image: m.photo } : null)),
+    ...[...league.players]
+      .sort((a, b) => a.lastName.localeCompare(b.lastName))
+      .map((p) => (p.photo ? { key: p.id, who: `${fullName(p)}${teamOf(p.teamId) ? `, ${teamOf(p.teamId)!.abbrev}` : ''}`, image: p.photo } : null)),
+  ].filter((r): r is NonNullable<typeof r> => !!r);
+  const nc = rows.filter((r) => r.image.nonCommercial).length;
+
+  return (
+    <>
+      <PageHeader title="Photo credits" subtitle={`${rows.length} free-licensed images`} back={href('c', save.id, 'settings')} />
+      <p className="muted small" style={{ marginBottom: 12 }}>
+        Photos and logos come from Wikimedia Commons and Creative Commons searches. Each is shown under its license; tap a license to see the original. Photos are framed around the face for display; the original files are unchanged.
+        {nc ? ` ${nc} photos are licensed for non-commercial use only.` : ''}
+      </p>
+      <div className="table-wrap">
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Image</th>
+              <th>Author</th>
+              <th>License</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.key}>
+                <td>{r.who}</td>
+                <td style={{ whiteSpace: 'normal' }}>{r.image.credit}</td>
+                <td>
+                  <a href={r.image.sourceUrl} target="_blank" rel="noreferrer noopener">
+                    {r.image.license}
+                  </a>
+                  <span className="muted small"> · {r.image.source}</span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </>
   );
 }

@@ -450,7 +450,7 @@ button { font: inherit; color: inherit; }
 .spot::before { content: ''; position: absolute; inset: 0; background: repeating-linear-gradient(115deg, rgba(255, 255, 255, 0.05) 0 2px, transparent 2px 22px); }
 .spot-num { position: absolute; left: 8px; top: 0; font-family: var(--display); font-weight: 900; font-style: italic; font-size: 220px; line-height: 1; color: color-mix(in srgb, var(--pteam2, #ffc72c) 22%, transparent); }
 .spot-photo { position: absolute; right: 0; bottom: 0; width: 58%; height: 100%; }
-.spot-photo .photo { object-position: 50% 15%; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 30%); mask-image: linear-gradient(90deg, transparent 0, #000 30%); }
+.spot-photo .photo { object-position: 50% 15%; background-color: transparent; -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 30%); mask-image: linear-gradient(90deg, transparent 0, #000 30%); }
 .spot-photo .photo-figure svg { width: 100%; height: auto; }
 .spot-straps { position: absolute; left: 0; bottom: 20px; display: flex; flex-direction: column; align-items: flex-start; max-width: 92%; }
 .spot-straps > * { clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 100%, 0 100%); }
@@ -491,6 +491,7 @@ button { font: inherit; color: inherit; }
 .logo-img { display: inline-grid; place-items: center; filter: none; }
 .logo-img img { max-width: 100%; max-height: 100%; object-fit: contain; filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.3)); }
 .photo { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 18%; }
+.photo-framed { background-repeat: no-repeat; background-color: var(--surface-2); }
 .photo-figure { display: grid; place-items: end center; overflow: hidden; }
 .photo-figure svg { width: 100%; height: auto; }
 .credit { font-size: 11px; color: var(--text-3); margin-top: 6px; line-height: 1.35; }

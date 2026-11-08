@@ -13,7 +13,7 @@ import { cachedLeague, withLatestImages } from './cloud/sync';
 import { putSave } from './storage/saves';
 import { PlayerPage } from './ui/screens/PlayerPage';
 import { Roster } from './ui/screens/Roster';
-import { More, Settings, Staff, StaffPage } from './ui/screens/StaffAndSettings';
+import { Credits, More, Settings, Staff, StaffPage } from './ui/screens/StaffAndSettings';
 import { BoxScore, Schedule } from './ui/screens/Season';
 
 export function App() {
@@ -58,7 +58,7 @@ function Career({ saveId, rest }: { saveId: string; rest: string[] }) {
   }
 
   const [section = 'home', arg] = rest;
-  const sectionForNav = section === 'player' ? 'roster' : section === 'team' ? 'league' : section === 'game' ? 'schedule' : section;
+  const sectionForNav = section === 'player' ? 'roster' : section === 'team' ? 'league' : section === 'game' ? 'schedule' : section === 'credits' ? 'settings' : section;
   return (
     <CareerProvider key={save.id} initial={save}>
       <Shell section={sectionForNav}>
@@ -72,6 +72,7 @@ function Career({ saveId, rest }: { saveId: string; rest: string[] }) {
         {section === 'staff' && arg && <StaffPage staffId={arg} />}
         {section === 'settings' && <Settings />}
         {section === 'more' && <More />}
+        {section === 'credits' && <Credits />}
         {section === 'schedule' && <Schedule />}
         {section === 'game' && arg && <BoxScore gameId={arg} />}
       </Shell>

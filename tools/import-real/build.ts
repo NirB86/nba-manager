@@ -26,6 +26,8 @@ import {
   type Team,
 } from '../../src/engine/types';
 import { validateLeague } from '../../src/engine/validate';
+
+type ImageFocus = NonNullable<NonNullable<Player['photo']>['focus']>;
 import { cacheName, pagesFor } from './fetch';
 import { infoAfter, loadPage, num, readTable, type Row } from './parse';
 import { REAL_TEAMS } from './teams';
@@ -555,6 +557,21 @@ if (existsSync(coachesFile)) {
     if (info.photo) s.photo = info.photo;
   }
   console.log(`Coaches: ${staff.filter((s) => s.role === 'HC' && s.photo).length} head coach photos`);
+}
+
+// Face positions for photo framing, if faces.ts has run.
+const facesFile = join(cacheDir, 'faces.json');
+if (existsSync(facesFile)) {
+  const faces = JSON.parse(readFileSync(facesFile, 'utf8')) as Record<string, ImageFocus | null>;
+  let n = 0;
+  for (const person of [...players, ...staff]) {
+    const f = person.photo ? faces[person.photo.url] : undefined;
+    if (person.photo && f) {
+      person.photo.focus = f;
+      n++;
+    }
+  }
+  console.log(`Faces: ${n} photos framed`);
 }
 
 // Future picks: who owns traded picks isn't on these pages, so every team starts with its own.

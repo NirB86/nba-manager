@@ -25,10 +25,51 @@ export function TeamBadge({ team, size = 40 }: { team: Pick<Team, 'abbrev' | 'co
   );
 }
 
+/**
+ * Background position and size that frame a photo around its face. `zoom` is
+ * the crop width in face widths; `eyeAt` is where the eye line sits in the
+ * frame (0 = top); `boxAspect` is the frame's height / width.
+ */
+export function faceFraming(focus: NonNullable<ImageCredit['focus']>, zoom: number, eyeAt: number, boxAspect: number) {
+  let cropW = Math.min(1, focus.w * zoom);
+  let cropH = (cropW * boxAspect) / focus.aspect; // in image heights
+  if (cropH > 1) {
+    cropW = focus.aspect / boxAspect;
+    cropH = 1;
+  }
+  const clamp = (v: number) => Math.max(0, Math.min(100, v));
+  const px = cropW < 1 ? clamp(((focus.x - cropW / 2) / (1 - cropW)) * 100) : 50;
+  const py = cropH < 1 ? clamp(((focus.y - eyeAt * cropH) / (1 - cropH)) * 100) : 50;
+  return { backgroundSize: `${100 / cropW}% auto`, backgroundPosition: `${px.toFixed(1)}% ${py.toFixed(1)}%` };
+}
+
 /** A player's free-licensed photo, or the jersey figure when there is none. */
-export function PlayerPhoto({ photo, number, colors, className }: { photo?: ImageCredit; number: number | string; colors: { primary: string; secondary: string }; className?: string }) {
+export function PlayerPhoto({
+  photo,
+  number,
+  colors,
+  className,
+  frame = 'headshot',
+  boxAspect = 1,
+}: {
+  photo?: ImageCredit;
+  number: number | string;
+  colors: { primary: string; secondary: string };
+  className?: string;
+  /** headshot: tight on the face; portrait: head and shoulders for big banners. */
+  frame?: 'headshot' | 'portrait';
+  boxAspect?: number;
+}) {
   const [broken, setBroken] = useState(false);
   if (photo && !broken) {
+    if (photo.focus) {
+      const framing = frame === 'headshot' ? faceFraming(photo.focus, 2.6, 0.42, boxAspect) : faceFraming(photo.focus, 4.2, 0.3, boxAspect);
+      return (
+        <span className={`photo photo-framed ${className ?? ''}`} style={{ backgroundImage: `url("${photo.url}")`, ...framing }}>
+          <img src={photo.url} alt="" loading="lazy" onError={() => setBroken(true)} hidden />
+        </span>
+      );
+    }
     return <img className={`photo ${className ?? ''}`} src={photo.url} alt="" loading="lazy" onError={() => setBroken(true)} />;
   }
   return (
