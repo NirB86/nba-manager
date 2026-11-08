@@ -6,6 +6,7 @@ import { Card, ImageCreditLine, Pill, Segmented, Stars, TeamBadge } from '../com
 import { attrTone, money, seasonLabel } from '../format';
 import { href } from '../router';
 import { Icon, PageHeader } from '../Shell';
+import { MusicSettings } from '../MusicControls';
 
 const ROLE_LABEL: Record<StaffRole, string> = {
   HC: 'Head coach',
@@ -76,6 +77,7 @@ export function Settings() {
   return (
     <>
       <PageHeader title="Settings" subtitle={save.name} />
+      <MusicSettings />
       <Card title="Career">
         <label className="field">
           <span>Career name</span>

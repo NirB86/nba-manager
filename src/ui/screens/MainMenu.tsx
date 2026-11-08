@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { deleteSave, exportSave, importSaveFile, listSaves, loadSave, type SaveSummary } from '../../storage/saves';
-import { displayRating, playerOverall, type LeagueFile } from '../../engine';
+import { playerOverall, type LeagueFile } from '../../engine';
 import { TeamBadge } from '../components';
+import { MusicButton } from '../MusicControls';
 import { cloudConfigured } from '../../cloud/cloud';
 import { cachedLeague, syncLeague, type SyncResult } from '../../cloud/sync';
 import type { CachedLeague } from '../../cloud/cloud';
@@ -66,6 +67,7 @@ export function MainMenu() {
         ) : (
           <img src="icons/favicon.svg" alt="" width={72} height={72} />
         )}
+        <MusicButton className="menu-music" />
         <span className="eyebrow">Basketball franchise management</span>
         <h1>
           NBA <span>Manager</span>
@@ -94,6 +96,8 @@ export function MainMenu() {
 
       {league && <LogoStrip league={league.league} />}
 
+      <div className="menu-body">
+      <aside className="menu-side">
       {cloudConfigured() && <LeagueCard league={league} sync={sync} />}
 
       {showInstallHint && (
@@ -102,6 +106,7 @@ export function MainMenu() {
         </div>
       )}
 
+      </aside>
       <section className="saves">
         <h2>Your careers</h2>
         {saves === null && <p className="muted">Loading…</p>}
@@ -137,6 +142,7 @@ export function MainMenu() {
         </ul>
         <p className="muted small">Saves live on this device. Export a save to back it up or move it to another device. Cloud sync is coming.</p>
       </section>
+      </div>
       <footer className="menu-footer muted small">© 2026 NirB86 · v{__APP_VERSION__} · Your careers are saved on this device</footer>
     </div>
   );
@@ -147,7 +153,7 @@ function HeroStars({ league }: { league: LeagueFile }) {
   const stars = league.players
     .filter((p) => p.teamId && p.photo?.source === 'NBA.com')
     .sort((a, b) => playerOverall(b) - playerOverall(a))
-    .slice(0, 3);
+    .slice(0, 5);
   if (!stars.length) return null;
   return (
     <div className="hero-stars" aria-hidden="true">
@@ -161,7 +167,6 @@ function HeroStars({ league }: { league: LeagueFile }) {
 /** Every team's logo, scrolling: tap one to start a career. */
 function LogoStrip({ league }: { league: LeagueFile }) {
   const teams = league.teams.filter((t) => t.logo);
-  const top = [...league.players].filter((p) => p.teamId).sort((a, b) => playerOverall(b) - playerOverall(a)).slice(0, 10);
   if (!teams.length) return null;
   return (
     <>
@@ -174,26 +179,6 @@ function LogoStrip({ league }: { league: LeagueFile }) {
           ))}
         </div>
       </div>
-      <section className="menu-top">
-        <h2>The league's best</h2>
-        <div className="menu-top-row">
-          {top.map((p, i) => {
-            const t = league.teams.find((x) => x.id === p.teamId);
-            return (
-              <div key={p.id} className="top-card" style={{ ['--team' as string]: t?.colors.primary ?? '#333', ['--team2' as string]: t?.colors.secondary ?? '#ccc' }}>
-                <span className="top-rank">{i + 1}</span>
-                {t?.logo && <img className="top-logo" src={t.logo.url} alt="" />}
-                {p.photo && <img className="top-photo" src={p.photo.url} alt="" loading="lazy" />}
-                <span className="top-ovr">{displayRating(playerOverall(p))}</span>
-                <span className="top-name">
-                  <small>{p.firstName}</small>
-                  {p.lastName}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-      </section>
     </>
   );
 }

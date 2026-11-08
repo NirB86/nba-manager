@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { teamName } from '../engine';
 import { useCareer, useOptionalCareer } from './career-context';
 import { TeamBadge } from './components';
+import { MusicButton } from './MusicControls';
 import { seasonLabel } from './format';
 import { href } from './router';
 import { dateLabel } from '../game/advance';
@@ -87,6 +88,7 @@ export function Shell({ section, children }: { section: string; children: ReactN
             </a>
           ))}
         </nav>
+        <MusicButton className="sidebar-music" />
         <a className="sidebar-exit" href={href()}>
           <Icon name="back" size={18} /> Main menu
         </a>
@@ -100,6 +102,7 @@ export function Shell({ section, children }: { section: string; children: ReactN
               <div className="topbar-team">{teamName(team)}</div>
               <div className="topbar-sub">{sub}</div>
             </div>
+            <MusicButton className="topbar-music" />
           </header>
         )}
         <main className="content">{children}</main>

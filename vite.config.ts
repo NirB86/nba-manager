@@ -43,7 +43,8 @@ export default defineConfig({
           },
           {
             // Free-licensed player photos and logos from imported leagues.
-            urlPattern: /^https:\/\/((upload|thumb)\.wikimedia\.org|api\.openverse\.org|cdn\.nba\.com)\/.*/i,
+            // Audio is left out: media players need range requests, which a cached copy cannot serve on iPhone.
+            urlPattern: ({ url }) => /^((upload|thumb)\.wikimedia\.org|api\.openverse\.org|cdn\.nba\.com)$/i.test(url.hostname) && !/\.(mp3|ogg|oga|opus|wav|m4a)$/i.test(url.pathname),
             handler: 'CacheFirst',
             options: { cacheName: 'photos', expiration: { maxEntries: 1500, maxAgeSeconds: 60 * 60 * 24 * 180 }, cacheableResponse: { statuses: [0, 200] } },
           },

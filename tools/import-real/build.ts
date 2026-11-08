@@ -121,10 +121,13 @@ const olderStats = (() => {
 
 /** Below this many recent minutes, the season before last fills in (injuries). */
 const FULL_SAMPLE = 1800;
-/** How much of the older season counts, given a player's recent minutes. */
+/**
+ * How much the season before last counts: always some (one big year should
+ * not make a superstar), more for players who missed most of last season.
+ */
 function olderWeight(id: string): number {
   const recent = (prevStats.get(id)?.mp ?? 0) + (curStats.get(id)?.mp ?? 0);
-  return recent >= FULL_SAMPLE ? 0 : 0.8 * (1 - recent / FULL_SAMPLE);
+  return 0.45 + (recent >= FULL_SAMPLE ? 0 : 0.4 * (1 - recent / FULL_SAMPLE));
 }
 
 /** Minutes-weighted blend of a stat across recent seasons. */
