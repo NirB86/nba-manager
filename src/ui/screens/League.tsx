@@ -97,21 +97,13 @@ export function TeamPage({ teamId }: { teamId: string }) {
 
   return (
     <>
-      <PageHeader title="" back={href('c', save.id, 'league')} />
-      <div className="team-hero" style={{ ['--team' as string]: team.colors.primary }}>
-        <TeamBadge team={team} size={64} />
-        <div>
-          {team.wordmark && (
-            <span className="wordmark">
-              <img src={team.wordmark.url} alt={teamName(team)} />
-            </span>
-          )}
-          <h1>{teamName(team)}</h1>
-          <p className="muted">
-            {div?.name} Division · {team.arena} · {team.market} market
-          </p>
-        </div>
-      </div>
+      <PageHeader
+        title={teamName(team)}
+        teamId={team.id}
+        eyebrow={`${conf?.name ?? ''} · ${div?.name} Division`}
+        subtitle={`${team.arena} · ${team.market} market`}
+        back={href('c', save.id, 'league')}
+      />
       <div className="stats-row">
         <Stat label="Team rating" value={<Ovr value={summary?.rating ?? 0} shown />} />
         <Stat label="Payroll" value={money(summary?.payroll ?? 0)} hint={summary ? CAP_STATUS_LABEL[capStatus(league.settings, summary.payroll)] : ''} />

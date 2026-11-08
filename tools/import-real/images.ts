@@ -37,16 +37,16 @@ async function getJson(url: string, init?: RequestInit): Promise<any> {
   throw new Error(`rate limited: ${url.slice(0, 120)}`);
 }
 
-async function sparql(query: string) {
+export async function sparql(query: string) {
   const data = await getJson(`https://query.wikidata.org/sparql?format=json&query=${encodeURIComponent(query)}`);
   return data.results.bindings as Record<string, { value: string }>[];
 }
 
-const fileName = (commonsUrl: string) => decodeURIComponent(commonsUrl.split('/').pop() ?? '');
+export const fileName = (commonsUrl: string) => decodeURIComponent(commonsUrl.split('/').pop() ?? '');
 const stripHtml = (s: string) => s.replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
 
 /** License, author and a thumbnail for Commons files, 50 per request. */
-async function commonsInfo(files: string[], width: number): Promise<Map<string, ImageCredit>> {
+export async function commonsInfo(files: string[], width: number): Promise<Map<string, ImageCredit>> {
   const out = new Map<string, ImageCredit>();
   for (let i = 0; i < files.length; i += 20) {
     const batch = files.slice(i, i + 20);
@@ -167,7 +167,10 @@ async function main() {
   console.log(`Photos: ${withPhoto}/${league.players.length} players. Logos: ${Object.values(cache.teams).filter((t) => t.logo).length} teams, wordmarks: ${Object.values(cache.teams).filter((t) => t.wordmark).length}.`);
 }
 
-main().catch((e) => {
-  console.error(e instanceof Error ? e.message : e);
-  process.exit(1);
-});
+// Run only as a script, so arenas.ts can reuse the helpers above.
+if (process.argv[1]?.endsWith('images.ts')) {
+  main().catch((e) => {
+    console.error(e instanceof Error ? e.message : e);
+    process.exit(1);
+  });
+}

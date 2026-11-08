@@ -4,7 +4,7 @@
 // See docs/league-format.md for the human-readable spec.
 
 export const LEAGUE_FORMAT = 'nbam-league';
-export const LEAGUE_FORMAT_VERSION = 3;
+export const LEAGUE_FORMAT_VERSION = 4;
 
 export type Id = string;
 export type Position = 'PG' | 'SG' | 'SF' | 'PF' | 'C';
@@ -90,6 +90,8 @@ export interface Team {
   /** Optional (format v2): team logo and wordmark images. */
   logo?: ImageCredit;
   wordmark?: ImageCredit;
+  /** Optional (format v4): photo of the home arena, used on page covers. */
+  arenaPhoto?: ImageCredit;
 }
 
 /** Attribute scale is 1-20, like Football Manager. */

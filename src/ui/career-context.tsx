@@ -24,6 +24,11 @@ export function CareerProvider({ initial, children }: { initial: SaveGame; child
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
+/** The career, or null outside one (menus, new career). */
+export function useOptionalCareer(): CareerCtx | null {
+  return useContext(Ctx);
+}
+
 export function useCareer(): CareerCtx {
   const ctx = useContext(Ctx);
   if (!ctx) throw new Error('useCareer outside CareerProvider');

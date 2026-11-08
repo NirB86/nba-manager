@@ -12,7 +12,7 @@ import {
   type CbaSettings,
 } from '../../engine';
 import { useCareer } from '../career-context';
-import { Card, LeagueLogo, Pill, Stat } from '../components';
+import { Card, DraftMark, Pill, Stat } from '../components';
 import { money, seasonLabel } from '../format';
 import { href } from '../router';
 import { PageHeader } from '../Shell';
@@ -163,7 +163,7 @@ export function Finances() {
         <p className="muted small">PO = player option, TO = team option. Future cap lines assume {Math.round(cba.capGrowth * 100)}% growth a year.</p>
       </Card>
 
-      <Card title="Draft picks owned" action={<LeagueLogo image={league.meta.draftLogo} className="draft-logo" label="Draft logo" />}>
+      <Card title="Draft picks owned" action={<DraftMark logo={league.meta.logo} year={season + 1} />}>
         <ul className="picks">
           {picks
             .sort((a, b) => a.season - b.season || a.round - b.round)

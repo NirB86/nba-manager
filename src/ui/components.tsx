@@ -10,6 +10,19 @@ export function LeagueLogo({ image, className = 'league-logo', label = 'League l
   return <img className={className} src={image.url} alt={label} onError={() => setBroken(true)} />;
 }
 
+/** Draft logo drawn by the game: the league logo with "Draft" and the year, so it is never out of date. */
+export function DraftMark({ logo, year }: { logo?: ImageCredit; year: number }) {
+  return (
+    <span className="draft-mark" aria-label={`Draft ${year}`}>
+      <LeagueLogo image={logo} className="draft-mark-logo" />
+      <span className="draft-mark-text">
+        <span>Draft</span>
+        <strong>{year}</strong>
+      </span>
+    </span>
+  );
+}
+
 export function TeamBadge({ team, size = 40 }: { team: Pick<Team, 'abbrev' | 'colors'> & { logo?: ImageCredit }; size?: number }) {
   const [broken, setBroken] = useState(false);
   if (team.logo && !broken) {

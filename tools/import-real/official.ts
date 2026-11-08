@@ -33,15 +33,8 @@ const credit = (url: string, sourceUrl: string): ImageCredit => ({
   sourceUrl,
 });
 
-/** The league logo on NBA.com and the latest draft logo (from Wikipedia: NBA.com has no stable link). */
+/** The league logo on NBA.com. The draft mark is drawn by the game (NBA logo + "Draft" + year). */
 export const leagueLogo = credit('https://cdn.nba.com/logos/leagues/logo-nba.svg', 'https://www.nba.com/');
-export const draftLogo: ImageCredit = {
-  url: 'https://upload.wikimedia.org/wikipedia/en/e/e0/2025_NBA_draft_logo.png',
-  credit: 'NBA',
-  license: '© NBA Properties, Inc. Linked for private personal use only.',
-  source: 'Wikipedia',
-  sourceUrl: 'https://en.wikipedia.org/wiki/File:2025_NBA_draft_logo.png',
-};
 
 export const headshot = (nbaId: string) => credit(`https://cdn.nba.com/headshots/nba/latest/1040x760/${nbaId}.png`, `https://www.nba.com/player/${nbaId}`);
 export const teamLogo = (teamId: number) => credit(`https://cdn.nba.com/logos/nba/${teamId}/primary/L/logo.svg`, `https://www.nba.com/team/${teamId}`);

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { teamName } from '../engine';
-import { useCareer } from './career-context';
+import { useCareer, useOptionalCareer } from './career-context';
 import { TeamBadge } from './components';
 import { seasonLabel } from './format';
 import { href } from './router';
@@ -124,7 +124,35 @@ export function Shell({ section, children }: { section: string; children: ReactN
   );
 }
 
-export function PageHeader({ title, subtitle, back, actions }: { title: ReactNode; subtitle?: ReactNode; back?: string; actions?: ReactNode }) {
+/**
+ * Page title. Inside a career, a titled page gets a broadcast-style cover:
+ * the team's arena photo (when the league has one), team colours and a big
+ * faded logo. `teamId` picks another team (team pages); default is yours.
+ */
+export function PageHeader({ title, subtitle, back, actions, teamId, eyebrow }: { title: ReactNode; subtitle?: ReactNode; back?: string; actions?: ReactNode; teamId?: string; eyebrow?: ReactNode }) {
+  const career = useOptionalCareer();
+  const team = career && title ? career.save.league.teams.find((t) => t.id === (teamId ?? career.save.career.teamId)) : undefined;
+  if (team) {
+    const theme = teamTheme(team);
+    return (
+      <header className={`cover ${team.arenaPhoto ? 'has-photo' : ''}`} style={{ ['--cteam' as string]: theme.team, ['--cteam2' as string]: theme.team2 }}>
+        {team.arenaPhoto && <img className="cover-photo" src={team.arenaPhoto.url} alt="" />}
+        <span className="cover-shade" aria-hidden="true" />
+        {team.logo ? <img className="cover-logo" src={team.logo.url} alt="" /> : <span className="cover-crest" aria-hidden="true"><TeamBadge team={team} size={150} /></span>}
+        <div className="cover-body">
+          {back && (
+            <a className="back-link" href={back}>
+              <Icon name="back" size={18} /> Back
+            </a>
+          )}
+          <span className="cover-eyebrow">{eyebrow ?? teamName(team)}</span>
+          <h1>{title}</h1>
+          {subtitle && <p className="cover-sub">{subtitle}</p>}
+          {actions && <div className="page-actions">{actions}</div>}
+        </div>
+      </header>
+    );
+  }
   return (
     <div className="page-header">
       {back && (

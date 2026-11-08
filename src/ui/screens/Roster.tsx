@@ -7,6 +7,7 @@ import { Ovr, Pill, PlayerPhoto, Segmented } from '../components';
 import { f1, pct, perGame } from './Season';
 import { height, money, seasonLabel } from '../format';
 import { href } from '../router';
+import { PageHeader } from '../Shell';
 
 type SortKey = 'ovr' | 'pos' | 'age' | 'salary' | 'pot' | 'name' | 'pts' | 'reb' | 'ast' | 'min';
 const potLabel = ([lo, hi]: [number, number]) => {
@@ -150,16 +151,10 @@ export function Roster() {
   const twoWay = players.filter((p) => p.contract?.kind === 'two-way').length;
   return (
     <>
-      <div className="page-header">
-        <div className="page-header-row">
-          <div>
-            <h1>Roster</h1>
-            <p className="muted">
-              {players.length - twoWay} of {save.league.settings.rosterMax} roster spots{twoWay ? ` + ${twoWay} two-way` : ''} · tap a column to sort, a player for details
-            </p>
-          </div>
-        </div>
-      </div>
+      <PageHeader
+        title="Roster"
+        subtitle={`${players.length - twoWay} of ${save.league.settings.rosterMax} roster spots${twoWay ? ` + ${twoWay} two-way` : ''} · tap a column to sort, a player for details`}
+      />
       <RosterTable save={save} players={players} />
     </>
   );

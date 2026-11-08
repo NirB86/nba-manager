@@ -18,6 +18,7 @@
     "import:publish": "NODE_USE_ENV_PROXY=1 tsx tools/import-real/publish.ts",
     "import:coaches": "NODE_USE_ENV_PROXY=1 tsx tools/import-real/coaches.ts",
     "import:official": "NODE_USE_ENV_PROXY=1 tsx tools/import-real/official.ts",
+    "import:arenas": "NODE_USE_ENV_PROXY=1 tsx tools/import-real/arenas.ts",
     "import:faces": "NODE_USE_ENV_PROXY=1 tsx tools/import-real/faces.ts",
     "import:images-nc": "NODE_USE_ENV_PROXY=1 tsx tools/import-real/images-nc.ts"
   },

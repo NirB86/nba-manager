@@ -174,7 +174,7 @@ function ImagesCard() {
           }),
           teams: s.league.teams.map((t) => {
             const src = teams.get(t.id);
-            return src?.logo ? { ...t, logo: src.logo, wordmark: src.wordmark } : t;
+            return src ? { ...t, ...(src.logo ? { logo: src.logo, wordmark: src.wordmark } : {}), arenaPhoto: src.arenaPhoto ?? t.arenaPhoto } : t;
           }),
         },
       }));
@@ -390,6 +390,7 @@ export function Credits() {
     ...league.teams.flatMap((t) => [
       t.logo ? { key: `${t.id}-logo`, who: `${teamName(t)} logo`, image: t.logo } : null,
       t.wordmark ? { key: `${t.id}-wm`, who: `${teamName(t)} wordmark`, image: t.wordmark } : null,
+      t.arenaPhoto ? { key: `${t.id}-arena`, who: `${t.arena ?? teamName(t)} (arena)`, image: t.arenaPhoto } : null,
     ]),
     ...league.staff.map((m) => (m.photo ? { key: m.id, who: `${fullName(m)} (${ROLE_LABEL[m.role].toLowerCase()})`, image: m.photo } : null)),
     ...[...league.players]

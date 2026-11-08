@@ -49,7 +49,7 @@ export function withLatestImages(save: SaveGame, latest: CachedLeague | undefine
     leagueVersion: latest.manifest.version,
     league: {
       ...save.league,
-      meta: { ...save.league.meta, logo: src.meta.logo ?? save.league.meta.logo, draftLogo: src.meta.draftLogo ?? save.league.meta.draftLogo },
+      meta: { ...save.league.meta, logo: src.meta.logo ?? save.league.meta.logo, draftLogo: src.meta.draftLogo },
       players: save.league.players.map((p) => {
         const r = sameSeason ? rated.get(p.id) : undefined;
         const withRatings = r ? { ...p, attributes: r.attributes, potential: r.potential } : p;
@@ -62,7 +62,7 @@ export function withLatestImages(save: SaveGame, latest: CachedLeague | undefine
       teams: save.league.teams.map((t) => {
         const s = teams.get(t.id);
         // A new logo replaces the old logo and wordmark together.
-        return s?.logo ? { ...t, logo: s.logo, wordmark: s.wordmark } : t;
+        return s ? { ...t, ...(s.logo ? { logo: s.logo, wordmark: s.wordmark } : {}), arenaPhoto: s.arenaPhoto ?? t.arenaPhoto } : t;
       }),
     },
   };

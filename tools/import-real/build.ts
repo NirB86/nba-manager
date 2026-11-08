@@ -31,7 +31,7 @@ type ImageFocus = NonNullable<NonNullable<Player['photo']>['focus']>;
 import { cacheName, pagesFor } from './fetch';
 import { infoAfter, loadPage, num, readTable, type Row } from './parse';
 import { REAL_TEAMS } from './teams';
-import { draftLogo, headshot, leagueLogo, teamLogo } from './official';
+import { headshot, leagueLogo, teamLogo } from './official';
 
 const [cacheDir, outFile, yearArg] = process.argv.slice(2);
 if (!cacheDir || !outFile) throw new Error('usage: build.ts <cache-dir> <out.json> [season-end-year]');
@@ -642,10 +642,18 @@ if (existsSync(officialFile)) {
 }
 applyFaces();
 
+// Arena photos for page covers, if arenas.ts has run (free-licensed, Commons).
+const arenasFile = join(cacheDir, 'arenas.json');
+if (existsSync(arenasFile)) {
+  const arenas = JSON.parse(readFileSync(arenasFile, 'utf8')) as Record<string, Team['arenaPhoto']>;
+  for (const t of teams) if (arenas[t.id]) t.arenaPhoto = arenas[t.id];
+  console.log(`Arenas: ${teams.filter((t) => t.arenaPhoto).length} arena photos`);
+}
+
 const league: LeagueFile = {
   format: LEAGUE_FORMAT,
   version: LEAGUE_FORMAT_VERSION,
-  meta: { name: `NBA ${SEASON}-${String(END_YEAR).slice(2)} (imported)`, season: SEASON, source: 'real', createdAt: new Date().toISOString(), ...(existsSync(officialFile) ? { logo: leagueLogo, draftLogo } : {}) },
+  meta: { name: `NBA ${SEASON}-${String(END_YEAR).slice(2)} (imported)`, season: SEASON, source: 'real', createdAt: new Date().toISOString(), ...(existsSync(officialFile) ? { logo: leagueLogo } : {}) },
   settings: cba,
   conferences: structuredClone(CONFERENCES),
   teams,
