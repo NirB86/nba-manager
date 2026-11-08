@@ -535,3 +535,37 @@ button { font: inherit; color: inherit; }
 .warmth { height: 8px; background: #dfe2e7; transform: skewX(-14deg); }
 .warmth span { display: block; height: 100%; transition: width 0.2s; }
 select.input { appearance: auto; }
+
+/* Multi-team trades */
+.partner-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 14px; }
+.partner-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 6px 6px 10px; background: var(--black); color: #fff; font-family: var(--label); font-weight: 800; font-size: 15px; text-transform: uppercase; }
+.partner-chip button { width: 26px; height: 26px; border: 0; background: var(--red); color: #fff; font-size: 16px; cursor: pointer; }
+.partner-add { max-width: 280px; min-height: 40px; }
+.trade-grid { display: grid; gap: 0 16px; }
+@media (min-width: 1000px) { .trade-grid.teams-2 { grid-template-columns: 1fr 1fr; } .trade-grid.teams-3, .trade-grid.teams-4 { grid-template-columns: repeat(2, 1fr); } }
+@media (min-width: 1400px) { .trade-grid.teams-3 { grid-template-columns: repeat(3, 1fr); } .trade-grid.teams-4 { grid-template-columns: repeat(4, 1fr); } }
+.chance-chip { padding: 2px 8px; background: var(--black); color: #fff; font-family: var(--display); font-weight: 900; font-style: italic; font-size: 16px; }
+.dest { min-height: 30px; border: 2px solid var(--black); background: #fff; font-family: var(--label); font-weight: 800; font-size: 13px; }
+.pick-chip { display: inline-flex; align-items: center; gap: 4px; padding: 0; }
+.pick-chip button { padding: 5px 10px; border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.pick-chip.on .dest { margin-right: 4px; }
+.chance-row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.chance-big { font-family: var(--display); font-weight: 900; font-style: italic; font-size: 30px; line-height: 1; }
+.trade-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.trade-actions .btn { flex: 1 1 auto; }
+.counter-card { border-top: 4px solid var(--red); }
+.counter-changes { margin: 0 0 12px; padding-left: 18px; font-weight: 600; }
+.counter-changes li { margin: 3px 0; }
+.counter-deal { display: grid; gap: 6px; padding: 10px 12px; background: var(--surface-2, #f3f3f3); margin-bottom: 12px; }
+.counter-deal > div { display: grid; grid-template-columns: 90px 1fr; gap: 8px; font-size: 14px; }
+.counter-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.scroll-anchor { scroll-margin-top: 80px; }
+@media (max-width: 899px) {
+  .trade-bar { gap: 6px; padding: 8px 14px; }
+  .trade-money { font-size: 12px; gap: 2px 12px; }
+  .trade-verdict p { font-size: 12px; margin-top: 3px; }
+  .chance-big { font-size: 24px; }
+  .trade-actions { display: grid; grid-template-columns: 1fr 1.3fr; }
+  .trade-actions .btn { min-height: 40px; padding: 0 10px; font-size: 13px; }
+  .counter-card { scroll-margin-top: 80px; }
+}

@@ -18,9 +18,22 @@ export interface TradeOffer {
   get: { players: string[]; picks: string[] };
 }
 
+const rankCache = new WeakMap<LeagueFile, { sig: string; order: string[] }>();
+
+/** Team ids from strongest to weakest by rating, cached until a player changes team. */
+export function ratingOrder(league: LeagueFile): string[] {
+  const sig = `${league.meta.season}|${league.players.map((p) => p.teamId ?? '').join(',')}`;
+  const hit = rankCache.get(league);
+  if (hit && hit.sig === sig) return hit.order;
+  const order = teamSummaries(league)
+    .sort((a, b) => b.rating - a.rating)
+    .map((s) => s.team.id);
+  rankCache.set(league, { sig, order });
+  return order;
+}
+
 export function teamStrategy(league: LeagueFile, teamId: string): Strategy {
-  const ranked = teamSummaries(league).sort((a, b) => b.rating - a.rating);
-  const rank = ranked.findIndex((s) => s.team.id === teamId) + 1;
+  const rank = ratingOrder(league).indexOf(teamId) + 1;
   if (rank <= 10) return 'contend';
   if (rank >= 21) return 'rebuild';
   return 'middle';
@@ -51,9 +64,9 @@ export function playerValue(league: LeagueFile, p: Player, strategy: Strategy): 
 
 /** Value of a draft pick: better when the original team looks weak, less when far away. */
 export function pickValue(league: LeagueFile, pick: DraftPick, strategy: Strategy): number {
-  const ranked = teamSummaries(league).sort((a, b) => a.rating - b.rating);
-  const fromRank = ranked.findIndex((s) => s.team.id === pick.originalTeamId); // 0 = weakest
-  const projected = 1 + (fromRank / Math.max(1, ranked.length - 1)) * 29; // 1..30
+  const order = ratingOrder(league);
+  const fromRank = order.length - 1 - order.indexOf(pick.originalTeamId); // 0 = weakest
+  const projected = 1 + (fromRank / Math.max(1, order.length - 1)) * 29; // 1..30
   const yearsOut = Math.max(0, pick.season - league.meta.season - 1);
   const base = pick.round === 1 ? 2.2 * Math.exp(-(projected - 1) / 11) + 0.6 : 0.25;
   const uncertainty = Math.pow(0.9, yearsOut);
@@ -69,6 +82,8 @@ export interface TradeCheck {
   problems: string[];
   /** Value change for each side by its own strategy (positive = better off). */
   gain: Record<string, number>;
+  /** Value each side sends away (multi-team checks). */
+  given?: Record<string, number>;
   salaryOut: Record<string, number>;
   salaryIn: Record<string, number>;
 }
@@ -157,6 +172,88 @@ export function executeTrade(league: LeagueFile, offer: TradeOffer) {
   movePicks(offer.get.picks, offer.fromTeam);
   // A traded player keeps his number unless a teammate already wears it.
   for (const team of [offer.fromTeam, offer.toTeam]) {
+    const taken = new Set<number>();
+    for (const p of league.players.filter((x) => x.teamId === team)) {
+      while (taken.has(p.jersey)) p.jersey = (p.jersey + 1) % 100;
+      taken.add(p.jersey);
+    }
+  }
+}
+
+// ------------------------------------------------------------ multi-team trades
+
+export interface TradeMove {
+  kind: 'player' | 'pick';
+  id: string;
+  from: string;
+  to: string;
+}
+
+export interface MultiTrade {
+  teams: string[];
+  moves: TradeMove[];
+}
+
+/** Check a deal between two or more teams: every team's salaries, roster and gain. */
+export function checkMultiTrade(league: LeagueFile, deal: MultiTrade): TradeCheck {
+  const season = league.meta.season;
+  const problems: string[] = [];
+  const byId = new Map(league.players.map((p) => [p.id, p]));
+  const pickById = new Map(league.draftPicks.map((k) => [k.id, k]));
+  const given: Record<string, number> = {};
+  const gain: Record<string, number> = {};
+  const salaryOutMap: Record<string, number> = {};
+  const salaryInMap: Record<string, number> = {};
+
+  for (const m of deal.moves) {
+    if (m.from === m.to) problems.push('A player or pick is being sent to its own team.');
+    if (m.kind === 'player') {
+      const p = byId.get(m.id);
+      if (!p || p.teamId !== m.from) problems.push('A player in this deal is no longer on that team.');
+      else if (p.contract?.noTrade) problems.push(`${p.firstName} ${p.lastName} has a no-trade clause.`);
+    } else {
+      const k = pickById.get(m.id);
+      if (!k || k.ownerTeamId !== m.from) problems.push('A draft pick in this deal is no longer owned by that team.');
+    }
+  }
+
+  for (const team of deal.teams) {
+    const strategy = teamStrategy(league, team);
+    const outP = deal.moves.filter((m) => m.kind === 'player' && m.from === team).map((m) => byId.get(m.id)).filter((p): p is Player => !!p);
+    const inP = deal.moves.filter((m) => m.kind === 'player' && m.to === team).map((m) => byId.get(m.id)).filter((p): p is Player => !!p);
+    const outK = deal.moves.filter((m) => m.kind === 'pick' && m.from === team).map((m) => pickById.get(m.id)).filter((k): k is DraftPick => !!k);
+    const inK = deal.moves.filter((m) => m.kind === 'pick' && m.to === team).map((m) => pickById.get(m.id)).filter((k): k is DraftPick => !!k);
+    const value = (ps: Player[], ks: DraftPick[]) => ps.reduce((s, p) => s + playerValue(league, p, strategy), 0) + ks.reduce((s, k) => s + pickValue(league, k, strategy), 0);
+    gain[team] = value(inP, inK) - value(outP, outK);
+    given[team] = value(outP, outK);
+    if (!outP.length && !outK.length && !inP.length && !inK.length) problems.push(`The ${teamLabel(league, team)} have nothing in this deal.`);
+
+    const out = outP.reduce((s, p) => s + salaryIn(p, season), 0);
+    const inn = inP.reduce((s, p) => s + salaryIn(p, season), 0);
+    salaryOutMap[team] = out;
+    salaryInMap[team] = inn;
+    const payrollAfter = teamPayroll(league, team, season) - out + inn;
+    if (payrollAfter > league.settings.salaryCap && inn > maxIncoming(league, payrollAfter, out)) {
+      problems.push(`Salaries don't match: the ${teamLabel(league, team)} can take back at most ${Math.round(maxIncoming(league, payrollAfter, out) / 100_000) / 10}M.`);
+    }
+    const current = rosterOf(league, team).filter((p) => p.contract?.kind !== 'two-way').length;
+    const after = current - outP.filter((p) => p.contract?.kind !== 'two-way').length + inP.filter((p) => p.contract?.kind !== 'two-way').length;
+    if (after > league.settings.rosterMax && after > current) problems.push(`The ${teamLabel(league, team)} would have ${after} players, over the ${league.settings.rosterMax}-man limit.`);
+  }
+  return { valid: problems.length === 0, problems: [...new Set(problems)], gain, given, salaryOut: salaryOutMap, salaryIn: salaryInMap };
+}
+
+export function executeMultiTrade(league: LeagueFile, deal: MultiTrade) {
+  for (const m of deal.moves) {
+    if (m.kind === 'player') {
+      const p = league.players.find((x) => x.id === m.id);
+      if (p) p.teamId = m.to;
+    } else {
+      const k = league.draftPicks.find((x) => x.id === m.id);
+      if (k) k.ownerTeamId = m.to;
+    }
+  }
+  for (const team of deal.teams) {
     const taken = new Set<number>();
     for (const p of league.players.filter((x) => x.teamId === team)) {
       while (taken.has(p.jersey)) p.jersey = (p.jersey + 1) % 100;

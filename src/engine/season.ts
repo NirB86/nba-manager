@@ -47,6 +47,8 @@ export interface SeasonState {
   highlights?: Highlight[];
   /** Trades completed this season, oldest first. */
   trades?: { day: number; teams: string[]; sent: string[]; got: string[] }[];
+  /** Offers the AI turned down, remembered for the rest of that day. */
+  declinedDeals?: { key: string; day: number }[];
 }
 
 export interface Highlight {
