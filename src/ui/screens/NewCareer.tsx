@@ -121,7 +121,13 @@ export function NewCareer() {
   }
 
   return (
-    <div className="wizard">
+    <div className={`wizard ${step === 'options' && chosen?.team.cityPhoto ? 'photo-stage' : ''}`} style={chosen ? { ['--team' as string]: chosen.team.colors.primary } : undefined}>
+      {step === 'options' && chosen?.team.cityPhoto && (
+        <>
+          <img className="wizard-bg" src={chosen.team.cityPhoto.url} alt="" />
+          <span className="wizard-bg-shade" aria-hidden="true" />
+        </>
+      )}
       <header className="wizard-head">
         <a className="back-link" href={href()}>
           ← Main menu
@@ -149,11 +155,10 @@ export function NewCareer() {
                     <button
                       key={s.team.id}
                       type="button"
-                      className={`team-card ${teamId === s.team.id ? 'on' : ''} ${s.team.cityPhoto ? 'has-photo' : ''}`}
+                      className={`team-card ${teamId === s.team.id ? 'on' : ''}`}
                       onClick={() => setTeamId(s.team.id)}
                       style={{ ['--team' as string]: s.team.colors.primary }}
                     >
-                      {s.team.cityPhoto && <img className="team-card-photo" src={s.team.cityPhoto.url} alt="" loading="lazy" />}
                       <TeamBadge team={s.team} size={44} />
                       <span className="team-card-text">
                         <strong>{teamName(s.team)}</strong>

@@ -1,8 +1,9 @@
 // City photos for choosing a team: a skyline or landmark per franchise,
-// free-licensed from Wikimedia Commons. Prefers the city's Wikivoyage page
-// banner on Wikidata (P948: wide, curated), else its main image (P18).
-// A few picks are set by hand (a speedway is not a skyline; the two Los
-// Angeles teams get different views). Results go to <cache-dir>/cities.json;
+// free-licensed from Wikimedia Commons, large enough to fill a screen.
+// Uses the city's main image on Wikidata (P18) unless it is a collage,
+// then its Wikivoyage banner (P948). Some picks are set by hand (a
+// skyline search where the main image is a collage, a speedway or a
+// single street; the two Los Angeles teams get different views). Results go to <cache-dir>/cities.json;
 // build.ts adds them to each team as `cityPhoto`.
 //
 //   npm run import:cities -- <cache-dir>
@@ -21,10 +22,17 @@ const CITY: Record<string, string> = {
 };
 
 /** Hand-picked: use the city's main image, or search Commons, instead of the banner. */
-const OVERRIDE: Record<string, { use: 'img' } | { search: string }> = {
-  't-lac': { use: 'img' },
+const OVERRIDE: Record<string, { use: 'banner' } | { search: string }> = {
+  't-lal': { search: 'Los Angeles downtown skyline night' },
   't-cha': { search: 'Charlotte North Carolina skyline' },
+  't-det': { search: 'Detroit skyline Renaissance Center river' },
+  't-hou': { search: 'Houston skyline' },
+  't-por': { search: 'Portland Oregon skyline Mount Hood' },
+  't-sas': { search: 'San Antonio skyline' },
+  't-bkn': { search: 'Brooklyn Bridge Manhattan skyline' },
 };
+
+const isCollage = (f: string) => /montage|collage/i.test(f);
 
 async function searchCommons(q: string): Promise<string | null> {
   const url =
@@ -32,7 +40,7 @@ async function searchCommons(q: string): Promise<string | null> {
     `&gsrsearch=${encodeURIComponent(`${q} filetype:bitmap`)}`;
   const data = await getJson(url);
   const pages = Object.values<any>(data.query?.pages ?? {}).sort((a, b) => (a.index ?? 0) - (b.index ?? 0));
-  const wide = pages.find((p) => p.imageinfo?.[0]?.width >= 1600 && p.imageinfo[0].width > 1.4 * p.imageinfo[0].height);
+  const wide = pages.find((p) => p.imageinfo?.[0]?.width >= 1920 && p.imageinfo[0].width > 1.3 * p.imageinfo[0].height && !isCollage(String(p.title)));
   return wide ? String(wide.title).replace(/^File:/, '') : null;
 }
 
@@ -54,12 +62,12 @@ async function main() {
   for (const [teamId, q] of Object.entries(CITY)) {
     const d = byCity.get(q) ?? {};
     const o = OVERRIDE[teamId];
-    let f: string | null | undefined = d.banner ?? d.img;
-    if (o && 'use' in o) f = d.img ?? f;
+    let f: string | null | undefined = d.img && !isCollage(d.img) ? d.img : (d.banner ?? d.img);
+    if (o && 'use' in o) f = d.banner ?? f;
     if (o && 'search' in o) f = (await searchCommons(o.search)) ?? f;
     if (f) pick.set(teamId, f);
   }
-  const info = await commonsInfo([...new Set(pick.values())], 1600);
+  const info = await commonsInfo([...new Set(pick.values())], 1920);
   const out: Record<string, ImageCredit> = {};
   for (const [teamId, f] of pick) {
     const credit = info.get(f);
