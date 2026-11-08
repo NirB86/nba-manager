@@ -165,6 +165,7 @@ function ImagesCard() {
         ...s,
         league: {
           ...s.league,
+          meta: { ...s.league.meta, logo: data.meta.logo ?? s.league.meta.logo, draftLogo: data.meta.draftLogo ?? s.league.meta.draftLogo },
           players: s.league.players.map((p) => {
             const photo = photos.get(p.id);
             if (!photo) return p;
@@ -173,7 +174,7 @@ function ImagesCard() {
           }),
           teams: s.league.teams.map((t) => {
             const src = teams.get(t.id);
-            return src ? { ...t, logo: src.logo ?? t.logo, wordmark: src.wordmark ?? t.wordmark } : t;
+            return src?.logo ? { ...t, logo: src.logo, wordmark: src.wordmark } : t;
           }),
         },
       }));
@@ -384,6 +385,8 @@ export function Credits() {
   const { league } = save;
   const teamOf = (id: string | null) => league.teams.find((t) => t.id === id);
   const rows = [
+    league.meta.logo ? { key: 'league-logo', who: 'League logo', image: league.meta.logo } : null,
+    league.meta.draftLogo ? { key: 'draft-logo', who: 'Draft logo', image: league.meta.draftLogo } : null,
     ...league.teams.flatMap((t) => [
       t.logo ? { key: `${t.id}-logo`, who: `${teamName(t)} logo`, image: t.logo } : null,
       t.wordmark ? { key: `${t.id}-wm`, who: `${teamName(t)} wordmark`, image: t.wordmark } : null,

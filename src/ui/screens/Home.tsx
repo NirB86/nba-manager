@@ -4,7 +4,7 @@ import { advance, lastUserGame, nextUserGame, type AdvanceTarget, type Progress 
 import { conferenceRank, leagueWire, ownerMood } from '../../game/news';
 import type { SaveGame } from '../../storage/saves';
 import { useCareer } from '../career-context';
-import { Card, Pill, PlayerPhoto, TeamBadge } from '../components';
+import { Card, Pill, PlayerPhoto, TeamBadge, LeagueLogo } from '../components';
 import { money } from '../format';
 import { href } from '../router';
 import { PageHeader } from '../Shell';
@@ -62,10 +62,13 @@ function MatchupBoard() {
 
   return (
     <section className="matchup">
-      <span className="strap">
-        {next && <span className="live-dot" />}
-        {next ? `Next game · ${boardLabel(save, next)}` : boardLabel(save, game)}
-      </span>
+      <div className="matchup-head">
+        <span className="strap">
+          {next && <span className="live-dot" />}
+          {next ? `Next game · ${boardLabel(save, next)}` : boardLabel(save, game)}
+        </span>
+        <LeagueLogo image={save.league.meta.logo} />
+      </div>
       {game && (
         <div className="matchup-board" style={style}>
           {side(game.away, false, next ? undefined : game.as)}

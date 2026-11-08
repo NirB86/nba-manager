@@ -4,7 +4,7 @@
 // See docs/league-format.md for the human-readable spec.
 
 export const LEAGUE_FORMAT = 'nbam-league';
-export const LEAGUE_FORMAT_VERSION = 2;
+export const LEAGUE_FORMAT_VERSION = 3;
 
 export type Id = string;
 export type Position = 'PG' | 'SG' | 'SF' | 'PF' | 'C';
@@ -32,6 +32,10 @@ export interface LeagueMeta {
   createdAt: string;
   /** Seed used by the fictional generator, so a league can be recreated. */
   seed?: number;
+  /** League logo, shown on the home screen (version 3). */
+  logo?: ImageCredit;
+  /** Draft logo, shown with draft picks and on draft day (version 3). */
+  draftLogo?: ImageCredit;
 }
 
 /** Salary-cap figures in US dollars. Per-season values so leagues can grow the cap. */

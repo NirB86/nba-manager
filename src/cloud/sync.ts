@@ -46,6 +46,7 @@ export function withLatestImages(save: SaveGame, latest: CachedLeague | undefine
     leagueVersion: latest.manifest.version,
     league: {
       ...save.league,
+      meta: { ...save.league.meta, logo: src.meta.logo ?? save.league.meta.logo, draftLogo: src.meta.draftLogo ?? save.league.meta.draftLogo },
       players: save.league.players.map((p) => (photos.get(p.id) ? { ...p, photo: photos.get(p.id) } : p)),
       staff: save.league.staff.map((m) => {
         const s = staffById.get(m.id);
@@ -53,7 +54,8 @@ export function withLatestImages(save: SaveGame, latest: CachedLeague | undefine
       }),
       teams: save.league.teams.map((t) => {
         const s = teams.get(t.id);
-        return s ? { ...t, logo: s.logo ?? t.logo, wordmark: s.wordmark ?? t.wordmark } : t;
+        // A new logo replaces the old logo and wordmark together.
+        return s?.logo ? { ...t, logo: s.logo, wordmark: s.wordmark } : t;
       }),
     },
   };

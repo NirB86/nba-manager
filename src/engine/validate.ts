@@ -26,6 +26,10 @@ export function validateLeague(data: unknown): ValidationResult {
     err(`Unsupported "version" (this game reads up to version ${LEAGUE_FORMAT_VERSION}).`);
   }
   if (!isObj(data.meta) || typeof data.meta.season !== 'number') err('"meta.season" is required.');
+  for (const key of ['logo', 'draftLogo'] as const) {
+    const img = isObj(data.meta) ? data.meta[key] : undefined;
+    if (img !== undefined && !(isObj(img) && typeof img.url === 'string' && img.url.startsWith('https://'))) err(`"meta.${key}" must be an image with an https:// url.`);
+  }
   if (!isObj(data.settings) || typeof data.settings.salaryCap !== 'number') err('"settings.salaryCap" is required.');
 
   for (const key of ['conferences', 'teams', 'players', 'staff', 'draftPicks'] as const) {

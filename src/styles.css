@@ -569,3 +569,7 @@ select.input { appearance: auto; }
   .trade-actions .btn { min-height: 40px; padding: 0 10px; font-size: 13px; }
   .counter-card { scroll-margin-top: 80px; }
 }
+.matchup-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.league-logo { height: 56px; width: auto; flex: none; padding: 6px 12px; background: var(--black); transform: skewX(-8deg); box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2); }
+.draft-logo { height: 40px; width: auto; }
+@media (max-width: 600px) { .league-logo { height: 40px; } }

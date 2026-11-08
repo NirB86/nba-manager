@@ -3,6 +3,13 @@ import { displayRating, type ImageCredit, type Team } from '../engine';
 import { attrTone, ovrTone } from './format';
 
 /** Generated team crest: a shield in the team's colors with its abbreviation. */
+/** League or draft logo from the league file; nothing when the league has none. */
+export function LeagueLogo({ image, className = 'league-logo', label = 'League logo' }: { image?: ImageCredit; className?: string; label?: string }) {
+  const [broken, setBroken] = useState(false);
+  if (!image || broken) return null;
+  return <img className={className} src={image.url} alt={label} onError={() => setBroken(true)} />;
+}
+
 export function TeamBadge({ team, size = 40 }: { team: Pick<Team, 'abbrev' | 'colors'> & { logo?: ImageCredit }; size?: number }) {
   const [broken, setBroken] = useState(false);
   if (team.logo && !broken) {

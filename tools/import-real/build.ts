@@ -31,7 +31,7 @@ type ImageFocus = NonNullable<NonNullable<Player['photo']>['focus']>;
 import { cacheName, pagesFor } from './fetch';
 import { infoAfter, loadPage, num, readTable, type Row } from './parse';
 import { REAL_TEAMS } from './teams';
-import { headshot, teamLogo } from './official';
+import { draftLogo, headshot, leagueLogo, teamLogo } from './official';
 
 const [cacheDir, outFile, yearArg] = process.argv.slice(2);
 if (!cacheDir || !outFile) throw new Error('usage: build.ts <cache-dir> <out.json> [season-end-year]');
@@ -625,7 +625,7 @@ applyFaces();
 const league: LeagueFile = {
   format: LEAGUE_FORMAT,
   version: LEAGUE_FORMAT_VERSION,
-  meta: { name: `NBA ${SEASON}-${String(END_YEAR).slice(2)} (imported)`, season: SEASON, source: 'real', createdAt: new Date().toISOString() },
+  meta: { name: `NBA ${SEASON}-${String(END_YEAR).slice(2)} (imported)`, season: SEASON, source: 'real', createdAt: new Date().toISOString(), ...(existsSync(officialFile) ? { logo: leagueLogo, draftLogo } : {}) },
   settings: cba,
   conferences: structuredClone(CONFERENCES),
   teams,

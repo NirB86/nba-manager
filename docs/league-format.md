@@ -1,4 +1,4 @@
-# League file format (version 2)
+# League file format (version 3)
 
 A league file is one JSON document that holds everything a new career starts
 from. The game ships with a generator for fictional leagues; any other league
@@ -11,8 +11,8 @@ The TypeScript definition is `src/engine/types.ts` and `validateLeague()` in
 | Field | Type | Notes |
 | --- | --- | --- |
 | `format` | `"nbam-league"` | Required, fixed value |
-| `version` | number | `2` (version 1 files, without images, still load) |
-| `meta` | object | `name`, `season` (year the season starts: 2026 = 2026-27), `source` (`fictional`, `real`, `custom`), `createdAt`, optional `seed` |
+| `version` | number | `3` (version 1 and 2 files still load) |
+| `meta` | object | `name`, `season` (year the season starts: 2026 = 2026-27), `source` (`fictional`, `real`, `custom`), `createdAt`, optional `seed`, optional `logo` and `draftLogo` (images, same shape as a player photo; version 3) |
 | `settings` | object | Cap figures and roster rules, below |
 | `conferences` | list | Each `{ id, name, divisions: [{ id, name }] }` |
 | `teams` | list | Below |
@@ -40,7 +40,7 @@ All money in US dollars.
 
 `{ id, city, name, abbrev, conferenceId, divisionId, market: "small" | "mid" | "large", colors: { primary, secondary }, arena, logo?, wordmark? }`
 
-`logo` and `wordmark` (optional, v2) are image credits: `{ url, credit, license, source, sourceUrl }`. Only free-licensed images belong here; the game shows the credit.
+`logo` and `wordmark` (optional, v2) are image credits: `{ url, credit, license, source, sourceUrl }`. Shared league files should use free-licensed images only; the game shows the credit. A private, personal-use league file may link to official images (never commit or share it).
 
 ## players
 
