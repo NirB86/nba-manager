@@ -52,7 +52,7 @@ export function withLatestImages(save: SaveGame, latest: CachedLeague | undefine
       meta: { ...save.league.meta, logo: src.meta.logo ?? save.league.meta.logo, draftLogo: src.meta.draftLogo },
       players: save.league.players.map((p) => {
         const r = sameSeason ? rated.get(p.id) : undefined;
-        const withRatings = r ? { ...p, attributes: r.attributes, potential: r.potential } : p;
+        const withRatings = r ? { ...p, attributes: r.attributes, potential: r.potential, college: r.college ?? p.college, jersey: r.teamId === p.teamId ? r.jersey : p.jersey } : p;
         return photos.get(p.id) ? { ...withRatings, photo: photos.get(p.id) } : withRatings;
       }),
       staff: save.league.staff.map((m) => {

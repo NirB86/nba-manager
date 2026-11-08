@@ -160,6 +160,7 @@ interface Bio {
   birth: { year: number; month: number; day: number } | null;
   country: string;
   experience: number;
+  college?: string;
 }
 
 const regionNames = new Intl.DisplayNames(['en'], { type: 'region' });
@@ -220,13 +221,28 @@ for (const rt of REAL_TEAMS) {
       ...splitName(r.player?.text ?? id),
       teamId,
       pos: toPos(r.pos?.text),
-      jersey: Number(r.number?.text) || 0,
+      // -1: no number listed yet; a free one is assigned below.
+      jersey: /^\d+$/.test(r.number?.text ?? '') ? Number(r.number!.text) : -1,
       heightIn: num(r.height) ?? 79,
       weightLb: num(r.weight) ?? 215,
       birth: birth ? { year: Number(birth.slice(0, 4)), month: Number(birth.slice(4, 6)), day: Number(birth.slice(6, 8)) } : null,
       country: countryName(flag),
       experience: r.years_experience?.text === 'R' ? 0 : Number(r.years_experience?.text) || 0,
+      college: r.college?.text?.trim() || undefined,
     });
+  }
+}
+
+// Players without a listed number get the lowest free one on their team.
+for (const t of REAL_TEAMS) {
+  const teamId = `t-${t.abbrev.toLowerCase()}`;
+  const list = [...bios.values()].filter((b) => b.teamId === teamId);
+  const taken = new Set(list.map((b) => b.jersey).filter((n) => n >= 0));
+  for (const b of list.filter((x) => x.jersey < 0)) {
+    let n = 1;
+    while (taken.has(n)) n++;
+    b.jersey = n;
+    taken.add(n);
   }
 }
 
@@ -531,6 +547,7 @@ for (const b of people) {
     contract,
     draft,
     experience: b.experience,
+    ...(b.college ? { college: b.college } : {}),
   });
 }
 

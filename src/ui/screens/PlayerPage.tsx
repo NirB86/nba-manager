@@ -167,6 +167,8 @@ export function PlayerPage({ playerId }: { playerId: string }) {
               <dd>
                 {p.born.year} · {p.born.country}
               </dd>
+              <dt>College</dt>
+              <dd>{p.college ?? (p.born.country !== 'USA' ? 'Came up overseas' : 'Not listed')}</dd>
               <dt>Draft</dt>
               <dd>{p.draft ? `${p.draft.season}, round ${p.draft.round}, ${ordinal(p.draft.pick)} pick${draftTeam ? ` by ${draftTeam.abbrev}` : ''}` : 'Undrafted'}</dd>
               <dt>Experience</dt>

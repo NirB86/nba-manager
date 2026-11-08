@@ -4,7 +4,7 @@
 // See docs/league-format.md for the human-readable spec.
 
 export const LEAGUE_FORMAT = 'nbam-league';
-export const LEAGUE_FORMAT_VERSION = 4;
+export const LEAGUE_FORMAT_VERSION = 5;
 
 export type Id = string;
 export type Position = 'PG' | 'SG' | 'SF' | 'PF' | 'C';
@@ -161,6 +161,8 @@ export interface Player {
   experience: number;
   /** Optional (format v2): a free-licensed photo. */
   photo?: ImageCredit;
+  /** Optional (format v5): college(s) attended, e.g. "Duke". */
+  college?: string;
 }
 
 export type StaffRole = 'HC' | 'AC' | 'SCOUT' | 'MED' | 'DEV';
