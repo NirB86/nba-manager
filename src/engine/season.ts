@@ -254,9 +254,9 @@ function addStats(table: Record<string, StatTotals>, result: GameResult) {
   }
 }
 
-function playGame(league: LeagueFile, rng: Rng, g: ScheduledGame, log?: PlayEvent[]): GameResult {
+function playGame(league: LeagueFile, rng: Rng, g: ScheduledGame, log?: PlayEvent[], played?: GameResult): GameResult {
   const roster = (teamId: string) => league.players.filter((p) => p.teamId === teamId);
-  const result = simulateGame(rng, { teamId: g.home, players: roster(g.home) }, { teamId: g.away, players: roster(g.away) }, log);
+  const result = played ?? simulateGame(rng, { teamId: g.home, players: roster(g.home) }, { teamId: g.away, players: roster(g.away) }, log);
   g.hs = result.home.score;
   g.as = result.away.score;
   g.ot = result.overtimes;
@@ -272,7 +272,11 @@ export interface DayReport {
  * Play the next day of the season in place. `keepBox` decides which games keep
  * a full box score in the save.
  */
-export function simulateDay(league: LeagueFile, season: SeasonState, rng: Rng, keepBox: (g: ScheduledGame) => boolean, logFor?: (g: ScheduledGame) => boolean): DayReport {
+/**
+ * `played`: results of games already played live (coached by the user), by
+ * game id. They are recorded instead of being simulated.
+ */
+export function simulateDay(league: LeagueFile, season: SeasonState, rng: Rng, keepBox: (g: ScheduledGame) => boolean, logFor?: (g: ScheduledGame) => boolean, played?: Record<string, GameResult>): DayReport {
   const report: DayReport = { played: [], phaseChanged: false };
   if (season.phase === 'done') return report;
 
@@ -280,7 +284,7 @@ export function simulateDay(league: LeagueFile, season: SeasonState, rng: Rng, k
     const today = season.games.filter((g) => g.day === season.day && g.hs === undefined);
     for (const g of today) {
       const log = logFor?.(g) ? [] : undefined;
-      const result = playGame(league, rng, g, log);
+      const result = playGame(league, rng, g, log, played?.[g.id]);
       addStats(season.stats.regular, result);
       recordHighlights(season, season.day, result);
       if (keepBox(g)) season.boxScores[g.id] = result;
@@ -308,7 +312,7 @@ export function simulateDay(league: LeagueFile, season: SeasonState, rng: Rng, k
       away: topHome ? s.bottom.teamId : s.top.teamId,
     };
     const log = logFor?.(g) ? [] : undefined;
-    const result = playGame(league, rng, g, log);
+    const result = playGame(league, rng, g, log, played?.[g.id]);
     addStats(season.stats.playoffs, result);
     recordHighlights(season, season.day, result);
     if (keepBox(g)) season.boxScores[g.id] = result;

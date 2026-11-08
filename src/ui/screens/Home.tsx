@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { CAP_STATUS_LABEL, capStatus, displayRating, rosterOf, playerOverall, teamPayroll, teamRating, type ImageCredit, type PlayEvent, type Player, type ScheduledGame } from '../../engine';
-import { advance, lastUserGame, nextUserGame, type AdvanceTarget, type Progress } from '../../game/advance';
+import { CAP_STATUS_LABEL, capStatus, displayRating, rosterOf, playerOverall, teamPayroll, teamRating, type GameResult, type ImageCredit, type Player, type ScheduledGame } from '../../engine';
+import { advance, advanceToGameDay, finishLiveGame, lastUserGame, nextUserGame, type AdvanceTarget, type Progress } from '../../game/advance';
 import { conferenceRank, leagueWire, ownerMood } from '../../game/news';
 import { morale, MORALE_LABEL, type MoraleLevel } from '../../game/morale';
 import type { SaveGame } from '../../storage/saves';
@@ -48,7 +48,7 @@ function MatchupBoard() {
 
   const [recap, setRecap] = useState<string | null>(null);
   const [chooser, setChooser] = useState(false);
-  const [cast, setCast] = useState<{ gameId: string; log: PlayEvent[]; mode: WatchMode } | null>(null);
+  const [cast, setCast] = useState<{ save: SaveGame; gameId: string; homeId: string; awayId: string; mode: WatchMode } | null>(null);
 
   /** Play game: instantly, or in 2D (asking first when the career is set to ask). */
   const playGame = () => {
@@ -63,20 +63,26 @@ function MatchupBoard() {
     if (mode === 'instant') void run('next-game');
     else void watch(mode);
   };
+  /** Live game: play the other games up to game day, then you watch and coach yours. */
   const watch = async (mode: WatchMode) => {
     setBusy({ done: 0, total: 1, label: 'Tip-off…' });
     try {
-      let captured: { gameId: string; log: PlayEvent[] } | null = null;
-      const result = await advance(save, 'next-game', setBusy, (gameId, log) => (captured = { gameId, log }));
-      update(() => result);
-      const got = captured as { gameId: string; log: PlayEvent[] } | null;
-      if (got) {
-        setRecap(null);
-        setCast({ ...got, mode });
-      }
+      const ready = await advanceToGameDay(save);
+      update(() => ready);
+      const g = nextUserGame(ready);
+      if (!g) return;
+      setRecap(null);
+      setCast({ save: ready, gameId: g.id, homeId: g.home, awayId: g.away, mode });
     } finally {
       setBusy(null);
     }
+  };
+  const finishLive = async (result: GameResult) => {
+    if (!cast) return;
+    const done = await finishLiveGame(cast.save, cast.gameId, result);
+    update(() => done);
+    setRecap(cast.gameId);
+    setCast(null);
   };
 
   const run = async (target: AdvanceTarget) => {
@@ -125,18 +131,7 @@ function MatchupBoard() {
   return (
     <>
     {chooser && <WatchChooser save={save} onPick={pick} onCancel={() => setChooser(false)} />}
-    {cast && (
-      <GameCast
-        save={save}
-        gameId={cast.gameId}
-        log={cast.log}
-        mode={cast.mode}
-        onDone={() => {
-          setRecap(cast.gameId);
-          setCast(null);
-        }}
-      />
-    )}
+    {cast && <GameCast save={cast.save} homeId={cast.homeId} awayId={cast.awayId} mode={cast.mode} onFinish={(r) => void finishLive(r)} />}
     {recap && <GameRecap save={save} gameId={recap} onClose={() => setRecap(null)} />}
     <section className="matchup">
       <div className="matchup-head">

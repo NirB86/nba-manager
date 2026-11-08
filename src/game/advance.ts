@@ -1,7 +1,7 @@
 // Advancing time in a career: plays days of the season and writes news to
 // the inbox. Runs in small chunks so the screen stays responsive.
 
-import { Rng, fullName, newSeed, simulateDay, standings, teamName, type PlayEvent, type ScheduledGame, type SeasonState, type Series } from '../engine';
+import { Rng, fullName, newSeed, simulateDay, standings, teamName, type GameResult, type PlayEvent, type ScheduledGame, type SeasonState, type Series } from '../engine';
 import type { InboxMessage, SaveGame } from '../storage/saves';
 import { weeklyMarket } from './market';
 
@@ -52,6 +52,44 @@ export function dateLabel(season: SeasonState): string {
  * \`onPlayByPlay\`: when given, your game is recorded possession by possession
  * (for the 2D view) and handed over with its id.
  */
+/**
+ * Play the other games until the day of your next game, so it can be played
+ * live. Returns a new save; your game is still to be played.
+ */
+export async function advanceToGameDay(original: SaveGame): Promise<SaveGame> {
+  const save = structuredClone(original);
+  const { league, season } = save;
+  const me = save.career.teamId;
+  const rng = new Rng(newSeed());
+  for (let guard = 0; guard < 200 && season.phase === 'regular'; guard++) {
+    const next = season.games.filter((g) => g.hs === undefined && (g.home === me || g.away === me)).sort((a, b) => a.day - b.day)[0];
+    if (!next || next.day <= season.day) break;
+    const phaseBefore = season.phase;
+    const seriesBefore = season.series.length;
+    const dayBefore = season.day;
+    const report = simulateDay(league, season, rng, (g) => g.home === me || g.away === me);
+    if (season.phase === 'regular' && season.day !== dayBefore && season.day % 7 === 0) weeklyMarket(save, rng);
+    if (report.phaseChanged) news(save, phaseBefore, seriesBefore);
+    if (guard % 6 === 5) await new Promise((r) => setTimeout(r, 0));
+  }
+  return save;
+}
+
+/** Record a game you played live, and play the rest of that day. */
+export async function finishLiveGame(original: SaveGame, gameId: string, result: GameResult): Promise<SaveGame> {
+  const save = structuredClone(original);
+  const { league, season } = save;
+  const me = save.career.teamId;
+  const rng = new Rng(newSeed());
+  const phaseBefore = season.phase;
+  const seriesBefore = season.series.length;
+  const dayBefore = season.day;
+  const report = simulateDay(league, season, rng, (g) => g.home === me || g.away === me || g.id.startsWith('finals'), undefined, { [gameId]: result });
+  if (season.phase === 'regular' && season.day !== dayBefore && season.day % 7 === 0) weeklyMarket(save, rng);
+  if (report.phaseChanged) news(save, phaseBefore, seriesBefore);
+  return save;
+}
+
 export async function advance(original: SaveGame, target: AdvanceTarget, onProgress?: (p: Progress) => void, onPlayByPlay?: (gameId: string, log: PlayEvent[]) => void): Promise<SaveGame> {
   const save = structuredClone(original);
   const { league, season } = save;

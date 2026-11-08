@@ -101,6 +101,9 @@ class Side {
   form = 0;
   quarters: number[] = [];
   fouls = 0;
+  tactics: Tactics = { ...DEFAULT_TACTICS };
+  autoSubs = true;
+  timeouts = TIMEOUTS;
 
   constructor(team: SimTeam) {
     const sorted = [...team.players]
@@ -188,7 +191,7 @@ function possession(rng: Rng, off: Side, def: Side, home: boolean): boolean {
   const edge = home ? HOME_EDGE : 0;
 
   // Turnover.
-  const tovP = clamp(0.128 + 0.006 * (def.avg('steals') - 10) + 0.004 * (def.avg('perimeterD') - 10) - 0.006 * (off.avg('ballHandling') - 10) - 0.004 * (off.avg('iq') - 10), 0.06, 0.22);
+  const tovP = clamp(0.128 + (def.tactics.defense === 'zone' ? 0.006 : def.tactics.defense === 'switch' ? 0.004 : 0) + (off.tactics.pace === 'fast' ? 0.008 : off.tactics.pace === 'slow' ? -0.006 : 0) + 0.006 * (def.avg('steals') - 10) + 0.004 * (def.avg('perimeterD') - 10) - 0.006 * (off.avg('ballHandling') - 10) - 0.004 * (off.avg('iq') - 10), 0.06, 0.22);
   if (rng.chance(tovP)) {
     const loser = weightedPick(rng, off.court, (c) => eff(c, 'ballHandling') + 6);
     loser.line.tov++;
@@ -210,12 +213,18 @@ function possession(rng: Rng, off: Side, def: Side, home: boolean): boolean {
     return false;
   }
 
-  const shooter = weightedPick(rng, off.court, (c) => usage(c));
+  const star = off.tactics.focus === 'star' ? [...off.court].sort((a, b) => b.ovr - a.ovr)[0] : undefined;
+  const shooter = weightedPick(rng, off.court, (c) => usage(c) * (c === star ? 1.9 : 1));
   const s = shooter.a;
   const wRim = 0.34 * ((eff(shooter, 'inside') + eff(shooter, 'finishing')) / 20) ** 1.6;
   const wMid = 0.22 * (eff(shooter, 'midRange') / 10) ** 1.3;
   const w3 = 0.33 * (eff(shooter, 'three') / 10) ** 2.2;
-  const kind: ShotKind = rng.weighted([['rim', wRim], ['mid', wMid], ['three', w3]] as const);
+  const focus = off.tactics.focus;
+  const kind: ShotKind = rng.weighted([
+    ['rim', wRim * (focus === 'inside' ? 1.4 : focus === 'three' ? 0.82 : 1)],
+    ['mid', wMid * (focus === 'inside' || focus === 'three' ? 0.75 : 1)],
+    ['three', w3 * (focus === 'three' ? 1.45 : focus === 'inside' ? 0.72 : 1)],
+  ] as const);
   if (rec) Object.assign(rec, { type: 'shot', player: shooter.p.id, kind });
 
   const defender = weightedPick(rng, def.court, () => 1);
@@ -231,6 +240,10 @@ function possession(rng: Rng, off: Side, def: Side, home: boolean): boolean {
     makeP = 0.303 + 0.0115 * (eff(shooter, 'three') - 10) - 0.005 * (eff(defender, 'perimeterD') - 10);
     foulP = 0.015;
   }
+  // Defensive scheme: a zone packs the paint but gives up threes; switching everything stops jumpers but leaves mismatches inside.
+  const scheme = def.tactics.defense;
+  if (scheme === 'zone') makeP += kind === 'rim' ? -0.035 : kind === 'three' ? 0.025 : 0.01;
+  else if (scheme === 'switch') makeP += kind === 'rim' ? 0.02 : -0.012;
   makeP = clamp(makeP + edge + off.form + 0.003 * (shooter.a.iq - 10), 0.15, 0.85);
 
   const points = kind === 'three' ? 3 : 2;
@@ -325,65 +338,199 @@ function trackPlusMinus(a: Side, b: Side, before: [number, number]) {
   for (const c of b.court) c.line.pm += db - da;
 }
 
-/** Simulate a game. With \`log\`, every possession is also written to it as play-by-play. */
-export function simulateGame(rng: Rng, homeTeam: SimTeam, awayTeam: SimTeam, log?: PlayEvent[]): GameResult {
-  const home = new Side(homeTeam);
-  const away = new Side(awayTeam);
-  home.form = rng.normal(0, 0.018);
-  away.form = rng.normal(0, 0.018);
-  let offense: Side = rng.chance(0.5) ? home : away;
-  let overtimes = 0;
-  let period = 0;
-  let regulationElapsed = 0;
+export type Pace = 'slow' | 'normal' | 'fast';
+export type DefenseScheme = 'man' | 'switch' | 'zone';
+export type OffenseFocus = 'balanced' | 'inside' | 'three' | 'star';
+export interface Tactics {
+  pace: Pace;
+  defense: DefenseScheme;
+  focus: OffenseFocus;
+}
+export const DEFAULT_TACTICS: Tactics = { pace: 'normal', defense: 'man', focus: 'balanced' };
 
-  const playPeriod = (length: number) => {
-    let clock = length;
-    const startScores = [home.score, away.score];
-    let sinceSub = 0;
-    while (clock > 0) {
-      const defense = offense === home ? away : home;
-      // Pace: about 100 possessions per team per 48 minutes, plus offensive-rebound trips.
-      const sec = Math.min(clock, clamp(Math.round(rng.normal(13.4, 4.5)), 4, 24));
-      const before: [number, number] = [home.score, away.score];
-      rec = log ? {} : null;
-      const homeCourt = log ? home.court.map((c) => c.p.id) : [];
-      const awayCourt = log ? away.court.map((c) => c.p.id) : [];
-      const keep = possession(rng, offense, defense, offense === home);
-      if (log && rec?.type) {
-        log.push({ ...(rec as PlayEvent), q: period + 1, clock: Math.max(0, clock - sec), off: offense === home ? 'home' : 'away', score: [home.score, away.score], homeCourt, awayCourt });
-      }
-      rec = null;
-      trackPlusMinus(home, away, before);
-      tick(home, sec);
-      tick(away, sec);
-      clock -= sec;
-      sinceSub += sec;
-      if (!keep) offense = defense;
-      if (sinceSub >= 150 && clock > 0) {
-        sinceSub = 0;
-        const total = 4 * QUARTER_SEC + overtimes * OT_SEC;
-        const elapsed = Math.min(total, regulationElapsed + (length - clock));
-        substitute(home, elapsed, total);
-        substitute(away, elapsed, total);
-      }
-    }
-    home.quarters.push(home.score - (startScores[0] as number));
-    away.quarters.push(away.score - (startScores[1] as number));
-    regulationElapsed += length;
-    period++;
-  };
+export interface LivePlayer {
+  id: string;
+  onCourt: boolean;
+  energy: number;
+  fouls: number;
+  pts: number;
+  reb: number;
+  ast: number;
+  sec: number;
+}
 
-  for (let q = 0; q < 4; q++) playPeriod(QUARTER_SEC);
-  while (home.score === away.score) {
-    overtimes++;
-    playPeriod(OT_SEC);
+export interface LiveState {
+  q: number;
+  clock: number;
+  score: [number, number];
+  done: boolean;
+  home: { players: LivePlayer[]; timeouts: number; tactics: Tactics; autoSubs: boolean };
+  away: { players: LivePlayer[]; timeouts: number; tactics: Tactics; autoSubs: boolean };
+}
+
+const TIMEOUTS = 7;
+
+/**
+ * A game played one possession at a time, so a coach can call timeouts,
+ * make substitutions and change tactics between possessions. With the
+ * default tactics and automatic rotations it plays exactly like
+ * simulateGame (which runs one of these to the end).
+ */
+export class LiveGame {
+  private readonly home: Side;
+  private readonly away: Side;
+  private offense: Side;
+  private overtimes = 0;
+  private period = 0;
+  private clock = QUARTER_SEC;
+  private length = QUARTER_SEC;
+  private startScores: [number, number] = [0, 0];
+  private sinceSub = 0;
+  private regulationElapsed = 0;
+  done = false;
+
+  constructor(
+    private readonly rng: Rng,
+    private readonly homeTeam: SimTeam,
+    private readonly awayTeam: SimTeam,
+  ) {
+    this.home = new Side(homeTeam);
+    this.away = new Side(awayTeam);
+    this.home.form = rng.normal(0, 0.018);
+    this.away.form = rng.normal(0, 0.018);
+    this.offense = rng.chance(0.5) ? this.home : this.away;
   }
 
-  const result = (s: Side, team: SimTeam): TeamResult => ({
-    teamId: team.teamId,
-    score: s.score,
-    quarters: s.quarters,
-    lines: s.roster.map((c) => c.line).filter((l) => l.sec > 0 || l.starter),
-  });
-  return { home: result(home, homeTeam), away: result(away, awayTeam), overtimes };
+  private side(which: 'home' | 'away') {
+    return which === 'home' ? this.home : this.away;
+  }
+
+  /** Play one possession. Returns its play-by-play. */
+  step(): PlayEvent | null {
+    if (this.done) return null;
+    const { rng, home, away } = this;
+    const offense = this.offense;
+    const defense = offense === home ? away : home;
+    // Pace: about 100 possessions per team per 48 minutes, plus offensive-rebound trips.
+    const mean = offense.tactics.pace === 'fast' ? 11.2 : offense.tactics.pace === 'slow' ? 16 : 13.4;
+    const sec = Math.min(this.clock, clamp(Math.round(rng.normal(mean, 4.5)), 4, 24));
+    const before: [number, number] = [home.score, away.score];
+    rec = {};
+    const homeCourt = home.court.map((c) => c.p.id);
+    const awayCourt = away.court.map((c) => c.p.id);
+    const keep = possession(rng, offense, defense, offense === home);
+    const event: PlayEvent | null = rec?.type
+      ? { ...(rec as PlayEvent), q: this.period + 1, clock: Math.max(0, this.clock - sec), off: offense === home ? 'home' : 'away', score: [home.score, away.score], homeCourt, awayCourt }
+      : null;
+    rec = null;
+    trackPlusMinus(home, away, before);
+    tick(home, sec);
+    tick(away, sec);
+    this.clock -= sec;
+    this.sinceSub += sec;
+    if (!keep) this.offense = defense;
+    // A player with six fouls must leave.
+    for (const side of [home, away]) foulOut(side);
+    if (this.sinceSub >= 150 && this.clock > 0) {
+      this.sinceSub = 0;
+      const total = 4 * QUARTER_SEC + this.overtimes * OT_SEC;
+      const elapsed = Math.min(total, this.regulationElapsed + (this.length - this.clock));
+      if (home.autoSubs) substitute(home, elapsed, total);
+      if (away.autoSubs) substitute(away, elapsed, total);
+    }
+    if (this.clock <= 0) this.endPeriod();
+    return event;
+  }
+
+  private endPeriod() {
+    const { home, away } = this;
+    home.quarters.push(home.score - this.startScores[0]);
+    away.quarters.push(away.score - this.startScores[1]);
+    this.regulationElapsed += this.length;
+    this.period++;
+    if (this.period < 4) this.startPeriod(QUARTER_SEC);
+    else if (home.score === away.score) {
+      this.overtimes++;
+      this.startPeriod(OT_SEC);
+    } else this.done = true;
+  }
+
+  private startPeriod(length: number) {
+    this.length = length;
+    this.clock = length;
+    this.startScores = [this.home.score, this.away.score];
+    this.sinceSub = 0;
+  }
+
+  /** Play to the end, optionally recording play-by-play. */
+  runToEnd(log?: PlayEvent[]) {
+    while (!this.done) {
+      const e = this.step();
+      if (e && log) log.push(e);
+    }
+  }
+
+  setTactics(which: 'home' | 'away', tactics: Partial<Tactics>) {
+    const s = this.side(which);
+    s.tactics = { ...s.tactics, ...tactics };
+  }
+
+  setAutoSubs(which: 'home' | 'away', on: boolean) {
+    this.side(which).autoSubs = on;
+  }
+
+  /** Swap a player on the floor for one on the bench. */
+  substitute(which: 'home' | 'away', outId: string, inId: string): boolean {
+    const s = this.side(which);
+    const out = s.court.find((c) => c.p.id === outId);
+    const inn = s.roster.find((c) => c.p.id === inId && !s.court.includes(c) && c.line.pf < 6);
+    if (!out || !inn) return false;
+    s.court = s.court.map((c) => (c === out ? inn : c));
+    return true;
+  }
+
+  /** A timeout: the players on the floor catch their breath. */
+  timeout(which: 'home' | 'away'): boolean {
+    const s = this.side(which);
+    if (s.timeouts <= 0 || this.done) return false;
+    s.timeouts--;
+    for (const c of s.roster) c.energy = Math.min(1, c.energy + (s.court.includes(c) ? 0.12 : 0.04));
+    return true;
+  }
+
+  state(): LiveState {
+    const view = (s: Side) => ({
+      players: s.roster.map((c) => ({ id: c.p.id, onCourt: s.court.includes(c), energy: c.energy, fouls: c.line.pf, pts: c.line.pts, reb: c.line.orb + c.line.drb, ast: c.line.ast, sec: c.line.sec })),
+      timeouts: s.timeouts,
+      tactics: s.tactics,
+      autoSubs: s.autoSubs,
+    });
+    return { q: this.period + 1, clock: Math.max(0, this.clock), score: [this.home.score, this.away.score], done: this.done, home: view(this.home), away: view(this.away) };
+  }
+
+  result(): GameResult {
+    const result = (s: Side, team: SimTeam): TeamResult => ({
+      teamId: team.teamId,
+      score: s.score,
+      quarters: s.quarters,
+      lines: s.roster.map((c) => c.line).filter((l) => l.sec > 0 || l.starter),
+    });
+    return { home: result(this.home, this.homeTeam), away: result(this.away, this.awayTeam), overtimes: this.overtimes };
+  }
+}
+
+/** Fouled-out players leave for the freshest eligible bench player. */
+function foulOut(side: Side) {
+  for (const c of side.court) {
+    if (c.line.pf < 6) continue;
+    const inn = side.roster.filter((x) => !side.court.includes(x) && x.line.pf < 6).sort((a, b) => b.energy - a.energy)[0];
+    if (inn) side.court = side.court.map((x) => (x === c ? inn : x));
+  }
+}
+
+/** Simulate a game. With `log`, every possession is also written to it as play-by-play. */
+export function simulateGame(rng: Rng, homeTeam: SimTeam, awayTeam: SimTeam, log?: PlayEvent[]): GameResult {
+  const game = new LiveGame(rng, homeTeam, awayTeam);
+  game.runToEnd(log);
+  return game.result();
 }

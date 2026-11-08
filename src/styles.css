@@ -906,3 +906,35 @@ select.input { appearance: auto; }
 .cast-progress { height: 6px; background: #d9dce2; }
 .cast-progress span { display: block; height: 100%; background: var(--red); transition: width 0.3s; }
 .cast-court { transition: none; }
+
+/* Live coaching */
+.cast-alert { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 12px; background: #fff; border-left: 6px solid var(--red); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15); font-weight: 600; }
+.cast-alert span:nth-child(2) { flex: 1; min-width: 180px; }
+.cast-coach { display: grid; grid-template-columns: 1.3fr 1fr 1fr; gap: 6px; margin-bottom: 10px; }
+.cast-coach .btn { min-height: 44px; padding: 0 8px; font-size: 14px; }
+.cast-coach .btn.on { background: var(--black); color: #fff; }
+.cast-tactics { display: grid; gap: 10px; margin-bottom: 12px; }
+.cast-tactic { display: grid; gap: 4px; }
+.cast-seg { display: flex; flex-wrap: wrap; border: 2px solid var(--black); }
+.cast-seg button { flex: 1 1 auto; min-height: 40px; padding: 0 8px; border: 0; background: #fff; font-family: var(--label); font-weight: 800; font-size: 13px; text-transform: uppercase; cursor: pointer; }
+.cast-seg button + button { border-left: 1px solid #c8ccd3; }
+.cast-seg button.on { background: var(--black); color: #fff; }
+.cast-lineup { margin-bottom: 12px; }
+.cast-lineup ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 3px; max-height: 340px; overflow: auto; }
+.cast-auto { display: flex; align-items: center; gap: 8px; font-weight: 600; font-size: 14px; }
+.cast-auto input { width: 20px; height: 20px; accent-color: var(--red); }
+.cast-player { width: 100%; display: grid; grid-template-columns: 1fr 70px 44px 26px; align-items: center; gap: 8px; min-height: 40px; padding: 4px 8px; border: 2px solid transparent; background: var(--surface-2, #f3f4f6); font: inherit; font-size: 14px; text-align: left; cursor: pointer; }
+.cast-player.court { background: #fff; border-color: #d9dce2; }
+.cast-player.picked { border-color: var(--red); background: color-mix(in srgb, var(--red) 8%, #fff); }
+.cast-player:disabled { opacity: 0.45; }
+.cast-pname { display: flex; align-items: center; gap: 6px; font-weight: 700; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cast-pname small { color: var(--text-3); font-weight: 600; }
+.dot-on { width: 8px; height: 8px; border-radius: 50%; background: #0a8f4e; flex: none; }
+.cast-energy { height: 8px; background: #e2e5ea; display: block; }
+.cast-energy i { display: block; height: 100%; }
+.cast-fouls { font-size: 12px; color: var(--text-3); font-weight: 700; }
+.cast-fouls.warn { color: #d97706; }
+.cast-fouls.bad { color: var(--red); }
+.cast-final { align-self: center; }
+.cast-coach .btn-timeout { background: var(--red); border-color: var(--red); color: #fff; font-family: var(--label); font-weight: 900; font-style: italic; text-transform: uppercase; }
+.cast-coach .btn-timeout:disabled { opacity: 0.4; }
