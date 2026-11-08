@@ -8,3 +8,7 @@ dev-dist
 # Real-league files and page caches (personal use, never commit)
 *.league.json
 .bref-cache/
+
+# Research notes and reports (local)
+research_notes/
+reports/
