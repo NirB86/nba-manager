@@ -22,6 +22,24 @@ season ends). The fetch step downloads about 77 pages, one every 3.5 seconds
 (Basketball-Reference allows 20 requests a minute), and skips pages already in
 the cache. Delete the cache folder to refresh after trades.
 
+### Official headshots and logos (optional, private use)
+
+```bash
+npm run import:official -- .bref-cache
+```
+
+```bash
+FACES_PACE_MS=150 npm run import:faces -- .bref-cache nba-2026-27.league.json
+```
+
+Then run the build again. `official.ts` looks up each player's NBA.com ID on
+Wikidata and the build links the league file to the official headshots and
+team logos on the NBA's CDN, in place of the free-licensed images. Nothing is
+downloaded into the league file or the repo; the owner's browser loads the
+images. These images are © NBA: only for a private league file that is never
+shared or committed. `faces.ts` then measures where each face sits, so the game
+frames every headshot the same way.
+
 ## Sources
 
 All from Basketball-Reference: team rosters (bio, height, weight, birth date,

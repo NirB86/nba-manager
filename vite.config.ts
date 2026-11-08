@@ -43,7 +43,7 @@ export default defineConfig({
           },
           {
             // Free-licensed player photos and logos from imported leagues.
-            urlPattern: /^https:\/\/((upload|thumb)\.wikimedia\.org|api\.openverse\.org)\/.*/i,
+            urlPattern: /^https:\/\/((upload|thumb)\.wikimedia\.org|api\.openverse\.org|cdn\.nba\.com)\/.*/i,
             handler: 'CacheFirst',
             options: { cacheName: 'photos', expiration: { maxEntries: 1500, maxAgeSeconds: 60 * 60 * 24 * 180 }, cacheableResponse: { statuses: [0, 200] } },
           },

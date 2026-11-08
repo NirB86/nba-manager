@@ -11,4 +11,5 @@
   `docs/league-format.md` and `validateLeague()`.
 - Run `npm test` and `npm run build` before committing.
 - Real NBA data only via `tools/import-real/` into a local `*.league.json`; never commit
-  real-league output or page caches (the repo is public).
+  real-league output or page caches (the repo is public). Official NBA.com headshots and
+  logos are only linked from that private league file, never stored in or shown by the repo.

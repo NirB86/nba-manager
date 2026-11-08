@@ -31,6 +31,7 @@ type ImageFocus = NonNullable<NonNullable<Player['photo']>['focus']>;
 import { cacheName, pagesFor } from './fetch';
 import { infoAfter, loadPage, num, readTable, type Row } from './parse';
 import { REAL_TEAMS } from './teams';
+import { headshot, teamLogo } from './official';
 
 const [cacheDir, outFile, yearArg] = process.argv.slice(2);
 if (!cacheDir || !outFile) throw new Error('usage: build.ts <cache-dir> <out.json> [season-end-year]');
@@ -560,6 +561,7 @@ if (existsSync(coachesFile)) {
 }
 
 // Face positions for photo framing, if faces.ts has run.
+function applyFaces() {
 const facesFile = join(cacheDir, 'faces.json');
 if (existsSync(facesFile)) {
   const faces = JSON.parse(readFileSync(facesFile, 'utf8')) as Record<string, ImageFocus | null>;
@@ -572,6 +574,7 @@ if (existsSync(facesFile)) {
     }
   }
   console.log(`Faces: ${n} photos framed`);
+}
 }
 
 // Future picks: who owns traded picks isn't on these pages, so every team starts with its own.
@@ -595,6 +598,29 @@ if (existsSync(imagesFile)) {
   for (const t of teams) Object.assign(t, images.teams[t.id] ?? {});
   console.log(`Images: ${players.filter((p) => p.photo).length} player photos, ${teams.filter((t) => t.logo).length} logos, ${teams.filter((t) => t.wordmark).length} wordmarks`);
 }
+
+// Official NBA.com headshots and logos, if official.ts has run (private use only).
+const officialFile = join(cacheDir, 'official.json');
+if (existsSync(officialFile)) {
+  const official = JSON.parse(readFileSync(officialFile, 'utf8')) as { players: Record<string, string>; teams: Record<string, number> };
+  let n = 0;
+  for (const p of players) {
+    const id = official.players[p.id];
+    if (id) {
+      p.photo = headshot(id);
+      n++;
+    }
+  }
+  for (const t of teams) {
+    const id = official.teams[t.abbrev];
+    if (id) {
+      t.logo = teamLogo(id);
+      delete t.wordmark;
+    }
+  }
+  console.log(`Official: ${n} NBA.com headshots, ${teams.filter((t) => t.logo?.source === 'NBA.com').length} logos`);
+}
+applyFaces();
 
 const league: LeagueFile = {
   format: LEAGUE_FORMAT,

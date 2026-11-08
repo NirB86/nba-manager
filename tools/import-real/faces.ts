@@ -23,6 +23,8 @@ export interface FaceFocus {
 }
 
 const require = createRequire(import.meta.url);
+/** Pause between downloads. Wikimedia needs ~1.8 s; set FACES_PACE_MS lower for a CDN. */
+const PACE_MS = Number(process.env.FACES_PACE_MS ?? 1800);
 const UA = 'nba-manager-import/0.1 (https://github.com/NirB86/nba-manager; personal non-commercial project)';
 const MODEL_DIR = join(process.cwd(), 'node_modules/@vladmandic/face-api/model');
 const LIB = join(process.cwd(), 'node_modules/@vladmandic/face-api/dist/face-api.js');
@@ -102,7 +104,7 @@ async function main() {
       writeFileSync(cachePath, JSON.stringify(cache));
       console.log(`  ${i + 1}/${urls.length}, faces found: ${found}`);
     }
-    await new Promise((r) => setTimeout(r, 1800));
+    await new Promise((r) => setTimeout(r, PACE_MS));
   }
   writeFileSync(cachePath, JSON.stringify(cache));
   await browser.close();
