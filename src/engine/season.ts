@@ -3,7 +3,7 @@
 // synced and resumed anywhere.
 
 import { Rng } from './random';
-import { simulateGame, type BoxLine, type GameResult } from './sim/game';
+import { simulateGame, type BoxLine, type GameResult, type PlayEvent } from './sim/game';
 import type { LeagueFile, Team } from './types';
 import type { MultiTrade } from './trade';
 
@@ -254,9 +254,9 @@ function addStats(table: Record<string, StatTotals>, result: GameResult) {
   }
 }
 
-function playGame(league: LeagueFile, rng: Rng, g: ScheduledGame): GameResult {
+function playGame(league: LeagueFile, rng: Rng, g: ScheduledGame, log?: PlayEvent[]): GameResult {
   const roster = (teamId: string) => league.players.filter((p) => p.teamId === teamId);
-  const result = simulateGame(rng, { teamId: g.home, players: roster(g.home) }, { teamId: g.away, players: roster(g.away) });
+  const result = simulateGame(rng, { teamId: g.home, players: roster(g.home) }, { teamId: g.away, players: roster(g.away) }, log);
   g.hs = result.home.score;
   g.as = result.away.score;
   g.ot = result.overtimes;
@@ -264,7 +264,7 @@ function playGame(league: LeagueFile, rng: Rng, g: ScheduledGame): GameResult {
 }
 
 export interface DayReport {
-  played: { game: ScheduledGame; result: GameResult }[];
+  played: { game: ScheduledGame; result: GameResult; log?: PlayEvent[] }[];
   phaseChanged: boolean;
 }
 
@@ -272,18 +272,19 @@ export interface DayReport {
  * Play the next day of the season in place. `keepBox` decides which games keep
  * a full box score in the save.
  */
-export function simulateDay(league: LeagueFile, season: SeasonState, rng: Rng, keepBox: (g: ScheduledGame) => boolean): DayReport {
+export function simulateDay(league: LeagueFile, season: SeasonState, rng: Rng, keepBox: (g: ScheduledGame) => boolean, logFor?: (g: ScheduledGame) => boolean): DayReport {
   const report: DayReport = { played: [], phaseChanged: false };
   if (season.phase === 'done') return report;
 
   if (season.phase === 'regular') {
     const today = season.games.filter((g) => g.day === season.day && g.hs === undefined);
     for (const g of today) {
-      const result = playGame(league, rng, g);
+      const log = logFor?.(g) ? [] : undefined;
+      const result = playGame(league, rng, g, log);
       addStats(season.stats.regular, result);
       recordHighlights(season, season.day, result);
       if (keepBox(g)) season.boxScores[g.id] = result;
-      report.played.push({ game: g, result });
+      report.played.push({ game: g, result, log });
     }
     season.day++;
     if (season.games.every((g) => g.hs !== undefined)) {
@@ -306,7 +307,8 @@ export function simulateDay(league: LeagueFile, season: SeasonState, rng: Rng, k
       home: topHome ? s.top.teamId : s.bottom.teamId,
       away: topHome ? s.bottom.teamId : s.top.teamId,
     };
-    const result = playGame(league, rng, g);
+    const log = logFor?.(g) ? [] : undefined;
+    const result = playGame(league, rng, g, log);
     addStats(season.stats.playoffs, result);
     recordHighlights(season, season.day, result);
     if (keepBox(g)) season.boxScores[g.id] = result;
@@ -316,7 +318,7 @@ export function simulateDay(league: LeagueFile, season: SeasonState, rng: Rng, k
     const needed = Math.ceil(s.bestOf / 2);
     if (s.wins[0] >= needed) s.winner = s.top.teamId;
     else if (s.wins[1] >= needed) s.winner = s.bottom.teamId;
-    report.played.push({ game: g, result });
+    report.played.push({ game: g, result, log });
   }
   season.day++;
   if (season.series.every((s) => s.winner !== null)) {

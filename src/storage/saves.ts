@@ -20,6 +20,8 @@ export interface CareerSettings {
   simMode: SimMode;
   scouting: ScoutingDepth;
   difficulty: Difficulty;
+  /** With "Watch": how to follow games in 2D. */
+  watchMode?: 'full' | 'key' | 'crunch';
 }
 
 export interface InboxMessage {

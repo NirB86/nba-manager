@@ -40,6 +40,37 @@ export interface GameResult {
   overtimes: number;
 }
 
+/** One possession of play-by-play, for watching a game in 2D. */
+export interface PlayEvent {
+  /** 1-4, 5+ = overtime. */
+  q: number;
+  /** Seconds left in the period when the play ends. */
+  clock: number;
+  off: 'home' | 'away';
+  type: 'shot' | 'ft' | 'tov';
+  /** Shooter, free-throw shooter, or the player who lost the ball. */
+  player: string;
+  kind?: 'rim' | 'mid' | 'three';
+  made?: boolean;
+  andOne?: boolean;
+  /** Free throws taken and made. */
+  fta?: number;
+  ftm?: number;
+  assist?: string;
+  steal?: string;
+  block?: string;
+  rebound?: string;
+  /** Offensive rebound: the same team keeps the ball. */
+  orb?: boolean;
+  /** Score after the play. */
+  score: [number, number];
+  homeCourt: string[];
+  awayCourt: string[];
+}
+
+/** Recording slot for the current possession (no effect on results or randomness). */
+let rec: Partial<PlayEvent> | null = null;
+
 export interface SimTeam {
   teamId: string;
   /** Players available tonight, any order. */
@@ -161,7 +192,12 @@ function possession(rng: Rng, off: Side, def: Side, home: boolean): boolean {
   if (rng.chance(tovP)) {
     const loser = weightedPick(rng, off.court, (c) => eff(c, 'ballHandling') + 6);
     loser.line.tov++;
-    if (rng.chance(0.55)) weightedPick(rng, def.court, (c) => eff(c, 'steals') ** 2).line.stl++;
+    if (rec) Object.assign(rec, { type: 'tov', player: loser.p.id });
+    if (rng.chance(0.55)) {
+      const thief = weightedPick(rng, def.court, (c) => eff(c, 'steals') ** 2);
+      thief.line.stl++;
+      if (rec) rec.steal = thief.p.id;
+    }
     return false;
   }
 
@@ -169,7 +205,8 @@ function possession(rng: Rng, off: Side, def: Side, home: boolean): boolean {
   if (rng.chance(0.035)) {
     weightedPick(rng, def.court, () => 1).line.pf++;
     const shooter = weightedPick(rng, off.court, (c) => usage(c));
-    freeThrows(rng, off, shooter, 2);
+    const ftm = freeThrows(rng, off, shooter, 2);
+    if (rec) Object.assign(rec, { type: 'ft', player: shooter.p.id, fta: 2, ftm });
     return false;
   }
 
@@ -179,6 +216,7 @@ function possession(rng: Rng, off: Side, def: Side, home: boolean): boolean {
   const wMid = 0.22 * (eff(shooter, 'midRange') / 10) ** 1.3;
   const w3 = 0.33 * (eff(shooter, 'three') / 10) ** 2.2;
   const kind: ShotKind = rng.weighted([['rim', wRim], ['mid', wMid], ['three', w3]] as const);
+  if (rec) Object.assign(rec, { type: 'shot', player: shooter.p.id, kind });
 
   const defender = weightedPick(rng, def.court, () => 1);
   let makeP: number;
@@ -204,9 +242,11 @@ function possession(rng: Rng, off: Side, def: Side, home: boolean): boolean {
       shooter.line.fga++;
       if (kind === 'three') shooter.line.tpa++;
       made(rng, off, def, shooter, kind, points);
-      freeThrows(rng, off, shooter, 1);
+      const ftm = freeThrows(rng, off, shooter, 1);
+      if (rec) Object.assign(rec, { made: true, andOne: true, fta: 1, ftm });
     } else {
-      freeThrows(rng, off, shooter, points);
+      const ftm = freeThrows(rng, off, shooter, points);
+      if (rec) Object.assign(rec, { type: 'ft', fta: points, ftm });
     }
     return false;
   }
@@ -215,19 +255,27 @@ function possession(rng: Rng, off: Side, def: Side, home: boolean): boolean {
   if (kind === 'three') shooter.line.tpa++;
   if (rng.chance(makeP)) {
     made(rng, off, def, shooter, kind, points);
+    if (rec) rec.made = true;
     return false;
   }
+  if (rec) rec.made = false;
 
   // Missed: blocked sometimes, then a rebound.
   if (kind !== 'three' && rng.chance(kind === 'rim' ? 0.36 + 0.02 * (def.avg('blocks') - 10) : 0.09)) {
-    weightedPick(rng, def.court, (c) => eff(c, 'blocks') ** 6).line.blk++;
+    const blocker = weightedPick(rng, def.court, (c) => eff(c, 'blocks') ** 6);
+    blocker.line.blk++;
+    if (rec) rec.block = blocker.p.id;
   }
   const orbP = clamp(0.245 + 0.012 * (off.avg('rebounding') - def.avg('rebounding')), 0.12, 0.4);
   if (rng.chance(orbP)) {
-    weightedPick(rng, off.court, (c) => eff(c, 'rebounding') ** 2).line.orb++;
+    const r = weightedPick(rng, off.court, (c) => eff(c, 'rebounding') ** 2);
+    r.line.orb++;
+    if (rec) Object.assign(rec, { rebound: r.p.id, orb: true });
     return true;
   }
-  weightedPick(rng, def.court, (c) => eff(c, 'rebounding') ** 2).line.drb++;
+  const r = weightedPick(rng, def.court, (c) => eff(c, 'rebounding') ** 2);
+  r.line.drb++;
+  if (rec) rec.rebound = r.p.id;
   return false;
 }
 
@@ -244,19 +292,24 @@ function made(rng: Rng, off: Side, def: Side, shooter: OnCourt, kind: ShotKind, 
   const assistedP = kind === 'three' ? 0.8 : kind === 'mid' ? 0.45 : 0.55;
   if (rng.chance(assistedP)) {
     const mates = off.court.filter((c) => c !== shooter);
-    weightedPick(rng, mates, (c) => eff(c, 'passing') ** 3.5).line.ast++;
+    const passer = weightedPick(rng, mates, (c) => eff(c, 'passing') ** 3.5);
+    passer.line.ast++;
+    if (rec) rec.assist = passer.p.id;
   }
 }
 
-function freeThrows(rng: Rng, off: Side, shooter: OnCourt, n: number) {
+function freeThrows(rng: Rng, off: Side, shooter: OnCourt, n: number): number {
   const p = clamp(0.73 + 0.016 * (shooter.a.freeThrow - 10), 0.4, 0.95);
+  let made = 0;
   for (let i = 0; i < n; i++) {
     shooter.line.fta++;
     if (rng.chance(p)) {
       shooter.line.ftm++;
+      made++;
       addPoints(off, null, shooter, 1);
     }
   }
+  return made;
 }
 
 function addPoints(off: Side, _def: Side | null, shooter: OnCourt, points: number) {
@@ -272,7 +325,8 @@ function trackPlusMinus(a: Side, b: Side, before: [number, number]) {
   for (const c of b.court) c.line.pm += db - da;
 }
 
-export function simulateGame(rng: Rng, homeTeam: SimTeam, awayTeam: SimTeam): GameResult {
+/** Simulate a game. With \`log\`, every possession is also written to it as play-by-play. */
+export function simulateGame(rng: Rng, homeTeam: SimTeam, awayTeam: SimTeam, log?: PlayEvent[]): GameResult {
   const home = new Side(homeTeam);
   const away = new Side(awayTeam);
   home.form = rng.normal(0, 0.018);
@@ -291,7 +345,14 @@ export function simulateGame(rng: Rng, homeTeam: SimTeam, awayTeam: SimTeam): Ga
       // Pace: about 100 possessions per team per 48 minutes, plus offensive-rebound trips.
       const sec = Math.min(clock, clamp(Math.round(rng.normal(13.4, 4.5)), 4, 24));
       const before: [number, number] = [home.score, away.score];
+      rec = log ? {} : null;
+      const homeCourt = log ? home.court.map((c) => c.p.id) : [];
+      const awayCourt = log ? away.court.map((c) => c.p.id) : [];
       const keep = possession(rng, offense, defense, offense === home);
+      if (log && rec?.type) {
+        log.push({ ...(rec as PlayEvent), q: period + 1, clock: Math.max(0, clock - sec), off: offense === home ? 'home' : 'away', score: [home.score, away.score], homeCourt, awayCourt });
+      }
+      rec = null;
       trackPlusMinus(home, away, before);
       tick(home, sec);
       tick(away, sec);

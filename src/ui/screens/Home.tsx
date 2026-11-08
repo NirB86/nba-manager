@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CAP_STATUS_LABEL, capStatus, displayRating, rosterOf, playerOverall, teamPayroll, teamRating, type ImageCredit, type Player, type ScheduledGame } from '../../engine';
+import { CAP_STATUS_LABEL, capStatus, displayRating, rosterOf, playerOverall, teamPayroll, teamRating, type ImageCredit, type PlayEvent, type Player, type ScheduledGame } from '../../engine';
 import { advance, lastUserGame, nextUserGame, type AdvanceTarget, type Progress } from '../../game/advance';
 import { conferenceRank, leagueWire, ownerMood } from '../../game/news';
 import { morale, MORALE_LABEL, type MoraleLevel } from '../../game/morale';
@@ -10,6 +10,7 @@ import { money } from '../format';
 import { href } from '../router';
 import { PageHeader } from '../Shell';
 import { GameRecap } from './GameRecap';
+import { GameCast, WatchChooser, type WatchMode } from './GameCast';
 import { OfferCard } from './OfferCard';
 import { recordOf, teamById } from './Season';
 
@@ -46,6 +47,38 @@ function MatchupBoard() {
   const phase = save.season.phase;
 
   const [recap, setRecap] = useState<string | null>(null);
+  const [chooser, setChooser] = useState(false);
+  const [cast, setCast] = useState<{ gameId: string; log: PlayEvent[]; mode: WatchMode } | null>(null);
+
+  /** Play game: instantly, or in 2D (asking first when the career is set to ask). */
+  const playGame = () => {
+    const sim = save.career.simMode;
+    if (sim === 'ask') setChooser(true);
+    else if (sim === 'watch') void watch(save.career.watchMode ?? 'full');
+    else void run('next-game');
+  };
+  const pick = (mode: WatchMode | 'instant', remember: boolean) => {
+    setChooser(false);
+    if (remember) update((s) => ({ ...s, career: { ...s.career, simMode: mode === 'instant' ? 'quick' : 'watch', watchMode: mode === 'instant' ? s.career.watchMode : mode } }));
+    if (mode === 'instant') void run('next-game');
+    else void watch(mode);
+  };
+  const watch = async (mode: WatchMode) => {
+    setBusy({ done: 0, total: 1, label: 'Tip-off…' });
+    try {
+      let captured: { gameId: string; log: PlayEvent[] } | null = null;
+      const result = await advance(save, 'next-game', setBusy, (gameId, log) => (captured = { gameId, log }));
+      update(() => result);
+      const got = captured as { gameId: string; log: PlayEvent[] } | null;
+      if (got) {
+        setRecap(null);
+        setCast({ ...got, mode });
+      }
+    } finally {
+      setBusy(null);
+    }
+  };
+
   const run = async (target: AdvanceTarget) => {
     setBusy({ done: 0, total: 1, label: 'Starting…' });
     try {
@@ -91,6 +124,19 @@ function MatchupBoard() {
 
   return (
     <>
+    {chooser && <WatchChooser save={save} onPick={pick} onCancel={() => setChooser(false)} />}
+    {cast && (
+      <GameCast
+        save={save}
+        gameId={cast.gameId}
+        log={cast.log}
+        mode={cast.mode}
+        onDone={() => {
+          setRecap(cast.gameId);
+          setCast(null);
+        }}
+      />
+    )}
     {recap && <GameRecap save={save} gameId={recap} onClose={() => setRecap(null)} />}
     <section className="matchup">
       <div className="matchup-head">
@@ -111,7 +157,7 @@ function MatchupBoard() {
       )}
       {phase !== 'done' ? (
         <>
-          <button className="btn btn-primary btn-lg matchup-play" type="button" disabled={!!busy} onClick={() => void run('next-game')}>
+          <button className="btn btn-primary btn-lg matchup-play" type="button" disabled={!!busy} onClick={() => (next && save.season.phase !== 'done' ? playGame() : void run('next-game'))}>
             {next ? 'Play game' : 'Continue'}
           </button>
           <div className="matchup-row">

@@ -1,7 +1,7 @@
 // Advancing time in a career: plays days of the season and writes news to
 // the inbox. Runs in small chunks so the screen stays responsive.
 
-import { Rng, fullName, newSeed, simulateDay, standings, teamName, type ScheduledGame, type SeasonState, type Series } from '../engine';
+import { Rng, fullName, newSeed, simulateDay, standings, teamName, type PlayEvent, type ScheduledGame, type SeasonState, type Series } from '../engine';
 import type { InboxMessage, SaveGame } from '../storage/saves';
 import { weeklyMarket } from './market';
 
@@ -48,7 +48,11 @@ export function dateLabel(season: SeasonState): string {
 }
 
 /** Play forward to the target. Returns a new save; the original is untouched. */
-export async function advance(original: SaveGame, target: AdvanceTarget, onProgress?: (p: Progress) => void): Promise<SaveGame> {
+/**
+ * \`onPlayByPlay\`: when given, your game is recorded possession by possession
+ * (for the 2D view) and handed over with its id.
+ */
+export async function advance(original: SaveGame, target: AdvanceTarget, onProgress?: (p: Progress) => void, onPlayByPlay?: (gameId: string, log: PlayEvent[]) => void): Promise<SaveGame> {
   const save = structuredClone(original);
   const { league, season } = save;
   const me = save.career.teamId;
@@ -77,7 +81,8 @@ export async function advance(original: SaveGame, target: AdvanceTarget, onProgr
     const phaseBefore = season.phase;
     const seriesBefore = season.series.length;
     const dayBefore = season.day;
-    const report = simulateDay(league, season, rng, (g) => isMine(g) || g.id.startsWith('finals'));
+    const report = simulateDay(league, season, rng, (g) => isMine(g) || g.id.startsWith('finals'), onPlayByPlay ? isMine : undefined);
+    for (const p of report.played) if (p.log && onPlayByPlay) onPlayByPlay(p.game.id, p.log);
     steps++;
     // Once a game week: offers, AI trades and rumors.
     if (season.phase === 'regular' && season.day !== dayBefore && season.day % 7 === 0) weeklyMarket(save, rng);
