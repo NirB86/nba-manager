@@ -9,7 +9,7 @@ import { conferenceRank } from '../game/news';
 import { standings } from '../engine';
 import { teamTheme, themeStyle } from './theme';
 
-type IconName = 'home' | 'roster' | 'league' | 'money' | 'staff' | 'settings' | 'more' | 'back' | 'calendar' | 'swap';
+type IconName = 'home' | 'roster' | 'league' | 'money' | 'staff' | 'settings' | 'more' | 'back' | 'calendar' | 'swap' | 'scout';
 
 const PATHS: Record<IconName, string> = {
   home: 'M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z',
@@ -22,6 +22,7 @@ const PATHS: Record<IconName, string> = {
   back: 'M15 18l-6-6 6-6',
   calendar: 'M4 6h16v14H4zM4 10h16M8 3v4M16 3v4',
   swap: 'M7 7h13l-4-4M17 17H4l4 4',
+  scout: 'M10.5 17a6.5 6.5 0 1 0 0-13 6.5 6.5 0 0 0 0 13zM15.5 15.5 21 21',
 };
 
 export function Icon({ name, size = 22 }: { name: IconName; size?: number }) {
@@ -44,6 +45,7 @@ const NAV: NavItem[] = [
   { key: 'roster', label: 'Roster', icon: 'roster', mobile: true },
   { key: 'schedule', label: 'Schedule', icon: 'calendar', mobile: false },
   { key: 'trade', label: 'Trade', icon: 'swap', mobile: false },
+  { key: 'scouting', label: 'Scouting', icon: 'scout', mobile: false },
   { key: 'league', label: 'League', icon: 'league', mobile: true },
   { key: 'finances', label: 'Finances', icon: 'money', mobile: true },
   { key: 'staff', label: 'Staff', icon: 'staff', mobile: false },
@@ -58,7 +60,7 @@ export function Shell({ section, children }: { section: string; children: ReactN
   const row = team ? standings(save.league, save.season.games).find((r) => r.teamId === team.id) : undefined;
   const record = row ? `${row.w}-${row.l}` : '0-0';
   const sub = save.season.games.some((g) => g.hs !== undefined) && team ? `${record} · ${conferenceRank(save, team.id)}` : `${seasonLabel(save.league.meta.season)} · ${dateLabel(save.season)}`;
-  const moreActive = section === 'staff' || section === 'settings' || section === 'more' || section === 'schedule' || section === 'trade' || section === 'credits';
+  const moreActive = section === 'staff' || section === 'settings' || section === 'more' || section === 'schedule' || section === 'trade' || section === 'credits' || section === 'scouting';
 
   return (
     <div className="shell arena" style={themeStyle(teamTheme(team))}>

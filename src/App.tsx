@@ -16,6 +16,7 @@ import { Roster } from './ui/screens/Roster';
 import { Credits, More, Settings, Staff, StaffPage } from './ui/screens/StaffAndSettings';
 import { BoxScore, Schedule } from './ui/screens/Season';
 import { Trade } from './ui/screens/Trade';
+import { Scouting } from './ui/screens/Scouting';
 
 export function App() {
   const path = useRoute();
@@ -76,6 +77,7 @@ function Career({ saveId, rest }: { saveId: string; rest: string[] }) {
         {section === 'credits' && <Credits />}
         {section === 'trade' && <Trade key={arg ?? 'none'} teamId={arg} playerId={rest[2]} />}
         {section === 'schedule' && <Schedule />}
+        {section === 'scouting' && <Scouting />}
         {section === 'game' && arg && <BoxScore gameId={arg} />}
       </Shell>
     </CareerProvider>

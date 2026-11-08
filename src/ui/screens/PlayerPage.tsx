@@ -5,6 +5,7 @@ import { negotiation } from '../../game/contracts';
 import { morale, MORALE_LABEL } from '../../game/morale';
 import { useCareer } from '../career-context';
 import { ContractOffer } from './ContractOffer';
+import { FitReportCard } from './Scouting';
 import { Card, ImageCreditLine, MoodPill, Pill, PlayerPhoto } from '../components';
 import { attrTone, height, money, ordinal, seasonLabel } from '../format';
 import { href } from '../router';
@@ -158,6 +159,7 @@ export function PlayerPage({ playerId }: { playerId: string }) {
               <p className="muted">No contract. Any team can sign this player.</p>
             )}
           </Card>
+          {!mine && <FitReportCard player={p} />}
           {p.teamId && (() => {
             const m = morale(save, p);
             return (

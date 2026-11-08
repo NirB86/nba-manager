@@ -9,6 +9,7 @@ import { Card, MoodPill, Pill, PlayerPhoto, TeamBadge, LeagueLogo } from '../com
 import { money } from '../format';
 import { href } from '../router';
 import { PageHeader } from '../Shell';
+import { GameRecap } from './GameRecap';
 import { recordOf, teamById } from './Season';
 
 /** Official headshots are transparent cut-outs: they can stand on a coloured panel. */
@@ -43,11 +44,17 @@ function MatchupBoard() {
   const game = next ?? last;
   const phase = save.season.phase;
 
+  const [recap, setRecap] = useState<string | null>(null);
   const run = async (target: AdvanceTarget) => {
     setBusy({ done: 0, total: 1, label: 'Starting…' });
     try {
       const result = await advance(save, target, setBusy);
       update(() => result);
+      // Show the game you just played (Play game), not the whole week.
+      if (target === 'next-game') {
+        const played = lastUserGame(result);
+        if (played && played.id !== last?.id && result.season.boxScores[played.id]) setRecap(played.id);
+      } else setRecap(null);
     } finally {
       setBusy(null);
     }
@@ -82,6 +89,8 @@ function MatchupBoard() {
   const style = { ['--home' as string]: home?.colors.primary, ['--away' as string]: away?.colors.primary };
 
   return (
+    <>
+    {recap && <GameRecap save={save} gameId={recap} onClose={() => setRecap(null)} />}
     <section className="matchup">
       <div className="matchup-head">
         <span className="strap">
@@ -138,6 +147,7 @@ function MatchupBoard() {
         </div>
       )}
     </section>
+    </>
   );
 }
 

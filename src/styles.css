@@ -723,3 +723,48 @@ select.input { appearance: auto; }
 .locker-upset { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 4px; }
 .locker-upset li { padding: 8px 10px; background: #fff; border-left: 4px solid var(--red); font-size: 14px; }
 .locker-upset a { color: inherit; font-weight: 400; }
+
+/* Scouting and fit reports */
+.fit-badge { display: inline-grid; place-items: center; min-width: 38px; height: 28px; padding: 0 6px; font-family: var(--display); font-weight: 900; font-style: italic; font-size: 17px; color: #fff; background: #6b7280; clip-path: polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%); }
+.fit-a { background: #0a8f4e; }
+.fit-b { background: #3aa76d; }
+.fit-c { background: #d97706; }
+.fit-d { background: var(--red); }
+.fit-summary { font-weight: 600; margin-bottom: 8px; }
+.fit-points { margin: 0; padding-left: 18px; display: grid; gap: 5px; }
+.fit-points .label { margin-right: 4px; }
+.fit-points li.up::marker { color: #0a8f4e; }
+.fit-points li.down::marker { color: var(--red); }
+.scout-picks-row { display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; scroll-padding-inline: 16px; margin: 0 -16px 16px; padding: 2px 16px 10px; }
+.scout-pick { flex: 0 0 260px; scroll-snap-align: start; display: flex; flex-direction: column; background: #fff; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); color: inherit; text-decoration: none !important; font-weight: 400; }
+.scout-pick-art { position: relative; height: 150px; overflow: hidden; background: linear-gradient(160deg, var(--team) 0%, color-mix(in srgb, var(--team) 50%, #000) 100%); }
+.scout-pick-art .fit-badge { position: absolute; left: 8px; bottom: 8px; font-size: 22px; height: 34px; min-width: 50px; }
+.scout-pick-body { display: grid; gap: 4px; padding: 10px 12px 12px; }
+.scout-pick-body strong { font-family: var(--label); font-weight: 900; font-style: italic; font-size: 19px; text-transform: uppercase; }
+.scout-filters { flex-wrap: wrap; gap: 8px; }
+@media (min-width: 900px) { .scout-picks-row { display: grid; grid-template-columns: repeat(3, 1fr); margin: 0 0 18px; padding: 0; overflow: visible; } .scout-pick { flex: none; } .scout-pick-art { height: 180px; } }
+
+/* Game recap after Play game */
+.recap { margin-bottom: 16px; padding: 14px 16px 16px; background: var(--black); color: #fff; box-shadow: 0 10px 24px rgba(0, 0, 0, 0.25); border-top: 4px solid var(--red); }
+.recap.won { border-top-color: #0a8f4e; }
+.recap-strap { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.recap.live .strap { animation: blink 1.4s infinite; }
+.recap.won .strap { background: #0a8f4e; }
+.recap .btn-ghost { color: #fff; }
+.recap-score { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.recap-team { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; padding: 8px 10px; background: rgba(255, 255, 255, 0.06); opacity: 0.85; }
+.recap-team.winner { opacity: 1; background: rgba(255, 255, 255, 0.14); }
+.recap-name { font-family: var(--label); font-weight: 900; font-style: italic; font-size: 18px; text-transform: uppercase; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.recap-pts { font-family: var(--display); font-weight: 900; font-style: italic; font-size: 38px; line-height: 1; font-variant-numeric: tabular-nums; }
+.recap-quarters { width: 100%; margin: 12px 0; border-collapse: collapse; font-family: var(--label); font-weight: 700; font-size: 14px; text-align: center; }
+.recap-quarters th, .recap-quarters td { padding: 4px 6px; border-bottom: 1px solid rgba(255, 255, 255, 0.12); min-width: 28px; }
+.recap-quarters th:first-child { text-align: left; }
+.recap-leaders { display: grid; gap: 12px; margin-bottom: 12px; }
+@media (min-width: 700px) { .recap-leaders { grid-template-columns: 1fr 1fr; } }
+.recap-leaders .label { color: rgba(255, 255, 255, 0.7); }
+.recap-leaders ul { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 3px; }
+.recap-leaders li { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; }
+.recap-leaders a { color: #fff; font-weight: 700; }
+.recap .btn { background: #fff; }
+@media (max-width: 600px) { .recap-score { grid-template-columns: 1fr; } }
+.recap .btn-ghost { background: transparent; color: #fff; border: 2px solid #fff; padding: 4px 14px; }
