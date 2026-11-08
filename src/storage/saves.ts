@@ -2,6 +2,7 @@
 // settings plus the full league state. Cloud sync (Phase 3) will upload the
 // same SaveGame objects, so this format is the contract for both.
 
+import type { OffseasonState } from '../game/offseason';
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import { Rng, newSeason, newSeed, validateLeague, teamName, type LeagueFile, type SeasonState } from '../engine';
 
@@ -45,6 +46,10 @@ export interface SaveGame {
   season: SeasonState;
   /** Version of the downloaded NBA league whose photos and logos this save has. */
   leagueVersion?: string;
+  /** Between the Finals and the next season: draft, free agency, camp. */
+  offseason?: OffseasonState;
+  /** Your team's past seasons, oldest first. */
+  history?: { season: number; wins: number; losses: number; champion: string | null }[];
 }
 
 export interface SaveSummary {

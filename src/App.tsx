@@ -17,6 +17,7 @@ import { Credits, More, Settings, Staff, StaffPage } from './ui/screens/StaffAnd
 import { BoxScore, Schedule } from './ui/screens/Season';
 import { Trade } from './ui/screens/Trade';
 import { Scouting } from './ui/screens/Scouting';
+import { Offseason } from './ui/screens/Offseason';
 
 export function App() {
   const path = useRoute();
@@ -60,7 +61,7 @@ function Career({ saveId, rest }: { saveId: string; rest: string[] }) {
   }
 
   const [section = 'home', arg] = rest;
-  const sectionForNav = section === 'player' ? 'roster' : section === 'team' ? 'league' : section === 'game' ? 'schedule' : section === 'credits' ? 'settings' : section;
+  const sectionForNav = section === 'player' ? 'roster' : section === 'team' ? 'league' : section === 'game' ? 'schedule' : section === 'credits' ? 'settings' : section === 'offseason' ? 'home' : section;
   return (
     <CareerProvider key={save.id} initial={save}>
       <Shell section={sectionForNav}>
@@ -78,6 +79,7 @@ function Career({ saveId, rest }: { saveId: string; rest: string[] }) {
         {section === 'trade' && <Trade key={arg ?? 'none'} teamId={arg} playerId={rest[2]} />}
         {section === 'schedule' && <Schedule />}
         {section === 'scouting' && <Scouting />}
+        {section === 'offseason' && <Offseason />}
         {section === 'game' && arg && <BoxScore gameId={arg} />}
       </Shell>
     </CareerProvider>

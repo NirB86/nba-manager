@@ -126,7 +126,7 @@ export function Trade({ teamId, playerId }: { teamId?: string; playerId?: string
 
   return (
     <>
-      <PageHeader title="Trade" subtitle={status.open ? `Trade deadline in ${status.daysLeft} day${status.daysLeft === 1 ? '' : 's'} (day ${tradeDeadlineDay(save) + 1})` : status.reason} />
+      <PageHeader title="Trade" subtitle={!status.open ? status.reason : status.daysLeft === undefined ? 'Offseason: trades are open during free agency' : `Trade deadline in ${status.daysLeft} day${status.daysLeft === 1 ? '' : 's'} (day ${tradeDeadlineDay(save) + 1})`} />
       <div ref={topRef} className="scroll-anchor" />
       {result && (
         <div className="notice" style={{ borderLeftColor: result.ok ? 'var(--good)' : 'var(--bad)' }}>

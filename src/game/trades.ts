@@ -13,7 +13,8 @@ export function tradeDeadlineDay(save: SaveGame): number {
 export function tradesOpen(save: SaveGame): { open: boolean; reason?: string; daysLeft?: number } {
   const s = save.season;
   if (s.phase === 'playoffs') return { open: false, reason: 'Trades are closed during the playoffs.' };
-  if (s.phase === 'done') return { open: false, reason: 'Trades reopen in the offseason, coming in a future update.' };
+  if (save.offseason?.stage === 'free-agency') return { open: true };
+  if (s.phase === 'done') return { open: false, reason: save.offseason ? 'Trades reopen when free agency starts.' : 'Trades reopen in free agency. Start the offseason from the home screen.' };
   const deadline = tradeDeadlineDay(save);
   if (s.day > deadline) return { open: false, reason: 'The trade deadline has passed. Trades reopen after the season.' };
   return { open: true, daysLeft: deadline - s.day };

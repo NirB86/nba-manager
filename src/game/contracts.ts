@@ -69,13 +69,17 @@ function askingSalary(save: SaveGame, p: Player, firstSeason: number): number {
   return Math.round(Math.max(cba.minimumSalary, Math.min(max, ask)) / 10_000) * 10_000;
 }
 
+/** The "day" contract talks are counted by: game days, or free-agency days in the summer. */
+const talkDay = (save: SaveGame) => (save.offseason ? 10_000 + save.offseason.faDay : save.season.day);
+
 /** Can the user's team talk contracts with this player now? */
 export function negotiation(save: SaveGame, p: Player): Eligibility {
   const { league, season: s } = save;
   const me = save.career.teamId;
   const season = league.meta.season;
   if (s.phase === 'playoffs') return { ok: false, reason: 'Contract talks wait until the playoffs are over.' };
-  const waitUntilNextDay = (s.contractTalks ?? []).some((t) => t.playerId === p.id && t.day === s.day);
+  if (save.offseason?.stage === 'draft') return { ok: false, reason: 'Contract talks open with free agency, right after the draft.' };
+  const waitUntilNextDay = (s.contractTalks ?? []).some((t) => t.playerId === p.id && t.day === talkDay(save));
   const age = playerAge(p, season);
 
   if (p.teamId === me) {
@@ -101,7 +105,9 @@ export function negotiation(save: SaveGame, p: Player): Eligibility {
   if (p.teamId === null) {
     const roster = rosterOf(league, me).filter((x) => x.contract?.kind !== 'two-way').length;
     if (roster >= league.settings.rosterMax) return { ok: false, reason: `Your roster is full (${roster} of ${league.settings.rosterMax}). Trade or release a player first.` };
-    const budget = signingBudget(save);
+    // Your own free agents: Bird rights let you go over the cap to keep them.
+    const bird = save.offseason?.birdRights[p.id] === me;
+    const budget = bird ? { limit: Math.round(maxSalaryShare(p.experience) * league.settings.salaryCap), how: 'Bird rights' } : signingBudget(save);
     const salary = askingSalary(save, p, season);
     return {
       ok: true,
@@ -160,11 +166,12 @@ export function evaluateOffer(save: SaveGame, p: Player, n: Negotiation, offer: 
   const optionFit = offer.option === 'player' ? 0.04 : offer.option === 'team' ? -0.05 : 0;
   // Winning teams and loyal players make it easier; free agents shop around.
   const strategy = teamStrategy(save.league, save.career.teamId);
-  const situation = (strategy === 'contend' ? 0.03 : strategy === 'rebuild' ? -0.03 : 0) + (n.kind === 'extension' ? (p.personality.loyalty - 10) * 0.006 : -0.02);
+  const situation = (strategy === 'contend' ? 0.03 : strategy === 'rebuild' ? -0.03 : 0) + (n.kind === 'extension' ? (p.personality.loyalty - 10) * 0.006 : -0.01);
   const difficulty = { easy: 0.04, normal: 0, hard: -0.05 }[save.career.difficulty];
   // Happy players re-sign more easily; unhappy ones want out.
   const mood = n.kind === 'extension' ? morale(save, p).score * 0.005 : 0;
-  const score = byYear - 1 + yearsFit + optionFit + situation + difficulty + mood;
+  // Paying his ask on a neutral team is a little better than a coin flip.
+  const score = 0.02 + byYear - 1 + yearsFit + optionFit + situation + difficulty + mood;
   const chance = Math.max(0.02, Math.min(0.98, 1 / (1 + Math.exp(-score / 0.045))));
   const message =
     chance >= 0.85 ? 'His agent is ready to sign.' : chance >= 0.6 ? 'Close: he is leaning yes.' : chance >= 0.35 ? 'On the fence.' : chance >= 0.12 ? 'Well short of what he wants.' : 'His agent laughs at that offer.';
@@ -183,7 +190,8 @@ export function makeOffer(original: SaveGame, playerId: string, offer: Offer, ro
   if (!v.valid) throw new Error(v.problem);
   if (roll() <= v.chance) return { signed: true, save: sign(original, playerId, n, offer) };
   const save = structuredClone(original);
-  save.season.contractTalks = [...(save.season.contractTalks ?? []).filter((t) => t.day === save.season.day), { playerId, day: save.season.day }];
+  const day = talkDay(save);
+  save.season.contractTalks = [...(save.season.contractTalks ?? []).filter((t) => t.day === day), { playerId, day }];
   return { signed: false, save, counter: counterFor(n, offer) };
 }
 

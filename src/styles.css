@@ -776,3 +776,19 @@ select.input { appearance: auto; }
 .offer-sides ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 6px; }
 .offer-asset { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .offer-asset a { font-weight: 700; }
+
+/* Offseason */
+.steps { display: flex; gap: 4px; list-style: none; margin: 0 0 14px; padding: 0; counter-reset: step; }
+.steps li { flex: 1; padding: 8px 10px; background: #fff; font-family: var(--label); font-weight: 800; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); counter-increment: step; clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%); }
+.steps li::before { content: counter(step) '  '; }
+.steps li.on { background: var(--red); color: #fff; }
+.steps li.done { background: var(--black); color: #fff; }
+.draft-clock { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 20px; padding: 14px 16px; margin-bottom: 16px; background: #fff; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); border-left: 6px solid var(--red); }
+.draft-clock > div:not(.draft-actions) { display: grid; gap: 4px; flex: 1; min-width: 220px; }
+.draft-clock strong { font-family: var(--label); font-weight: 900; font-style: italic; font-size: 22px; text-transform: uppercase; }
+.draft-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.draft-board { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 620px; overflow: auto; }
+.draft-board li { display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: var(--surface-2, #f3f4f6); font-size: 14px; }
+.draft-board li.mine { background: color-mix(in srgb, var(--red) 12%, #fff); border-left: 4px solid var(--red); }
+.draft-no { width: 28px; font-family: var(--display); font-weight: 900; font-style: italic; font-size: 18px; text-align: right; }
+@media (min-width: 1000px) { .draft-grid { grid-template-columns: 1.6fr 1fr; } }

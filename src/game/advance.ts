@@ -144,7 +144,7 @@ function news(save: SaveGame, phaseBefore: SeasonState['phase'], seriesBefore: n
     const finals = season.series.find((s) => s.round === 4);
     const mvp = finals ? finalsMvp(save, finals) : null;
     push(message(save, 'champion', 'League office', season.champion === me ? 'WE ARE CHAMPIONS!' : `${name(season.champion)} win the title`,
-      `${name(season.champion)} won the NBA Finals${finals ? ` ${Math.max(...finals.wins)}-${Math.min(...finals.wins)}` : ''}.${mvp ? ` Finals MVP: ${mvp}.` : ''} The offseason (draft, free agency, player development) arrives in the next update.`));
+      `${name(season.champion)} won the NBA Finals${finals ? ` ${Math.max(...finals.wins)}-${Math.min(...finals.wins)}` : ''}.${mvp ? ` Finals MVP: ${mvp}.` : ''} The offseason starts from the home screen: draft lottery, the draft, free agency, then training camp.`));
   }
 }
 

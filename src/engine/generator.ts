@@ -141,7 +141,7 @@ function fitPayroll(roster: Player[], target: number, cba: CbaSettings, season: 
   }
 }
 
-function pickName(rng: Rng, regions: readonly (readonly [NameRegion, number])[], used: Set<string>, avoidLast?: Set<string>) {
+export function pickName(rng: Rng, regions: readonly (readonly [NameRegion, number])[], used: Set<string>, avoidLast?: Set<string>) {
   for (let attempt = 0; attempt < 50; attempt++) {
     const region = rng.weighted(regions);
     const firstName = rng.pick(region.first);

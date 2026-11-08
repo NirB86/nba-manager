@@ -137,9 +137,9 @@ function MatchupBoard() {
           )}
         </>
       ) : (
-        <p className="small muted" style={{ marginTop: 8 }}>
-          The offseason (draft, free agency, development) arrives in a coming update.
-        </p>
+        <a className="btn btn-primary btn-lg matchup-play" href={href('c', save.id, 'offseason')}>
+          {save.offseason ? (save.offseason.stage === 'draft' ? 'Back to the draft' : 'Back to free agency') : 'Start the offseason'}
+        </a>
       )}
       {last && save.season.boxScores[last.id] && (
         <div className="matchup-foot">
