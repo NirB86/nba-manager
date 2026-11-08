@@ -45,6 +45,8 @@ export interface SeasonState {
   boxScores: Record<string, GameResult>;
   /** Recent standout performances, newest first (for news tickers). */
   highlights?: Highlight[];
+  /** Trades completed this season, oldest first. */
+  trades?: { day: number; teams: string[]; sent: string[]; got: string[] }[];
 }
 
 export interface Highlight {

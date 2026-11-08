@@ -3,6 +3,7 @@ import {
   capStatus,
   fullName,
   playerOverall,
+  displayRating,
   projectedCba,
   rosterOf,
   salaryIn,
@@ -116,7 +117,7 @@ export function Finances() {
                     <a className="row-link" href={href('c', save.id, 'player', p.id)}>
                       {fullName(p)}
                     </a>
-                    <span className="muted small"> · {playerOverall(p)}</span>
+                    <span className="muted small"> · {displayRating(playerOverall(p))}</span>
                   </td>
                   {seasons.map((s) => {
                     const v = salaryIn(p, s);

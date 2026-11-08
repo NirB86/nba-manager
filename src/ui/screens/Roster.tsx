@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { fullName, playerAge, playerOverall, salaryIn, type Player } from '../../engine';
+import { displayRating, fullName, playerAge, playerOverall, salaryIn, type Player } from '../../engine';
 import { potentialRange } from '../../game/scouting';
 import type { SaveGame } from '../../storage/saves';
 import { useCareer } from '../career-context';
@@ -9,7 +9,10 @@ import { height, money, seasonLabel } from '../format';
 import { href } from '../router';
 
 type SortKey = 'ovr' | 'pos' | 'age' | 'salary' | 'pot' | 'name' | 'pts' | 'reb' | 'ast' | 'min';
-const potLabel = ([lo, hi]: [number, number]) => (lo === hi ? `${lo}` : `${lo}-${hi}`);
+const potLabel = ([lo, hi]: [number, number]) => {
+  const [a, b] = [displayRating(lo), displayRating(hi)];
+  return a === b ? `${a}` : `${a}-${b}`;
+};
 const POS_ORDER = { PG: 0, SG: 1, SF: 2, PF: 3, C: 4 } as const;
 
 export function RosterTable({ save, players }: { save: SaveGame; players: Player[] }) {

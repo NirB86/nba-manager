@@ -1,6 +1,7 @@
 // Finds the main face in every player photo so the game can frame all photos
 // the same way (a headshot centred on the eyes), without editing the files.
-// Runs face detection (face-api, MIT, SSD MobileNet v1 + 68-point landmarks)
+// Runs face detection (face-api, MIT: Tiny Face Detector, SSD MobileNet v1 as
+// fallback, and tiny 68-point landmarks)
 // in headless Chromium; images are downloaded by Node and handed over, so the
 // browser needs no network access. Results are cached in <cache-dir>/faces.json.
 //
@@ -54,26 +55,32 @@ async function main() {
   await page.addScriptTag({ path: LIB });
   await page.evaluate(async () => {
     const f = (window as any).faceapi;
+    await f.nets.tinyFaceDetector.loadFromUri('http://local/model');
+    await f.nets.faceLandmark68TinyNet.loadFromUri('http://local/model');
     await f.nets.ssdMobilenetv1.loadFromUri('http://local/model');
-    await f.nets.faceLandmark68Net.loadFromUri('http://local/model');
   });
 
   let found = 0;
   for (const [i, url] of urls.entries()) {
     try {
-      let res = await fetch(url, { headers: { 'user-agent': UA } });
-      for (let attempt = 1; res.status === 429 && attempt <= 5; attempt++) {
-        await new Promise((r) => setTimeout(r, (Number(res.headers.get('retry-after')) || 10 * attempt) * 1000));
+      if (process.env.DEBUG_FACES) console.log(`  fetch ${i}`);
+      let res = await fetch(url, { headers: { "user-agent": UA } });
+      for (let attempt = 1; res.status === 429 && attempt <= 3; attempt++) {
+        const wait = Math.min(30, Number(res.headers.get('retry-after')) || 10 * attempt);
+        await new Promise((r) => setTimeout(r, wait * 1000));
         res = await fetch(url, { headers: { 'user-agent': UA } });
       }
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       images.set(String(i), Buffer.from(await res.arrayBuffer()));
-      const focus = (await page.evaluate(async (key: string) => {
+      const timeout = new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timed out')), 20_000));
+      const focus = (await Promise.race([timeout, page.evaluate(async (key: string) => {
         const f = (window as any).faceapi;
         const img = new Image();
         img.src = `http://local/${key}`;
         await img.decode();
-        const faces = await f.detectAllFaces(img, new f.SsdMobilenetv1Options({ minConfidence: 0.45 })).withFaceLandmarks();
+        // Fast detector first; the slower, more accurate one only when it finds nothing.
+        let faces = await f.detectAllFaces(img, new f.TinyFaceDetectorOptions({ inputSize: 416, scoreThreshold: 0.45 })).withFaceLandmarks(true);
+        if (!faces.length) faces = await f.detectAllFaces(img, new f.SsdMobilenetv1Options({ minConfidence: 0.45 })).withFaceLandmarks(true);
         if (!faces.length) return null;
         // The biggest face is the subject; others are teammates or fans.
         const main = faces.sort((a: any, b: any) => b.detection.box.width - a.detection.box.width)[0];
@@ -84,18 +91,18 @@ async function main() {
         const W = img.naturalWidth;
         const H = img.naturalHeight;
         return { x: ex / W, y: ey / H, w: box.width / W, aspect: H / W };
-      }, String(i))) as FaceFocus | null;
+      }, String(i))])) as FaceFocus | null;
       images.delete(String(i));
       cache[url] = focus ? { x: +focus.x.toFixed(4), y: +focus.y.toFixed(4), w: +focus.w.toFixed(4), aspect: +focus.aspect.toFixed(4) } : null;
       if (focus) found++;
     } catch (e) {
       console.warn(`  ${url.slice(-60)}: ${(e as Error).message}`);
     }
-    if (i % 50 === 49) {
+    if (i % 25 === 24) {
       writeFileSync(cachePath, JSON.stringify(cache));
       console.log(`  ${i + 1}/${urls.length}, faces found: ${found}`);
     }
-    await new Promise((r) => setTimeout(r, 700));
+    await new Promise((r) => setTimeout(r, 1800));
   }
   writeFileSync(cachePath, JSON.stringify(cache));
   await browser.close();

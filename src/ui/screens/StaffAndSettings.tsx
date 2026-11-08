@@ -118,6 +118,7 @@ export function Settings() {
 export function More() {
   const { save } = useCareer();
   const items = [
+    { key: 'trade', label: 'Trade', icon: 'swap' as const },
     { key: 'schedule', label: 'Schedule', icon: 'calendar' as const },
     { key: 'staff', label: 'Staff', icon: 'staff' as const },
     { key: 'settings', label: 'Settings', icon: 'settings' as const },

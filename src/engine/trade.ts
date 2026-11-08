@@ -130,8 +130,10 @@ export function checkTrade(league: LeagueFile, offer: TradeOffer): TradeCheck {
     if (payrollAfter > league.settings.salaryCap && salaryInSum > maxIncoming(league, payrollAfter, salaryOut)) {
       problems.push(`Salaries don't match: the ${teamLabel(league, side.team)} can take back at most ${Math.round(maxIncoming(league, payrollAfter, salaryOut) / 100_000) / 10}M.`);
     }
-    const standard = rosterOf(league, side.team).filter((p) => p.contract?.kind !== 'two-way').length - out.filter((p) => p.contract?.kind !== 'two-way').length + inn.filter((p) => p.contract?.kind !== 'two-way').length;
-    if (standard > league.settings.rosterMax) problems.push(`The ${teamLabel(league, side.team)} would have ${standard} players, over the ${league.settings.rosterMax}-man limit.`);
+    const current = rosterOf(league, side.team).filter((p) => p.contract?.kind !== 'two-way').length;
+    const standard = current - out.filter((p) => p.contract?.kind !== 'two-way').length + inn.filter((p) => p.contract?.kind !== 'two-way').length;
+    // Only a trade that grows an over-limit roster is blocked.
+    if (standard > league.settings.rosterMax && standard > current) problems.push(`The ${teamLabel(league, side.team)} would have ${standard} players, over the ${league.settings.rosterMax}-man limit.`);
   }
 
   return { valid: problems.length === 0, problems: [...new Set(problems)], gain, salaryOut: salaryOutMap, salaryIn: salaryInMap };

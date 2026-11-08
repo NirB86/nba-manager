@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   CAP_STATUS_LABEL,
   capStatus,
+  displayRating,
   teamName,
   teamSummaries,
   validateLeague,
@@ -184,7 +185,7 @@ export function NewCareer() {
             <TeamBadge team={chosen.team} size={56} />
             <div>
               <h2>{teamName(chosen.team)}</h2>
-              <p className="muted">{tierLabel(chosen.team.id)} · team rating {chosen.rating} (ranked {chosen.rank})</p>
+              <p className="muted">{tierLabel(chosen.team.id)} · team rating {displayRating(chosen.rating)} (ranked {chosen.rank})</p>
             </div>
           </div>
 

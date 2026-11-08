@@ -1,7 +1,7 @@
 // Advancing time in a career: plays days of the season and writes news to
 // the inbox. Runs in small chunks so the screen stays responsive.
 
-import { Rng, fullName, newSeed, playerOverall, simulateDay, standings, teamName, type ScheduledGame, type SeasonState, type Series } from '../engine';
+import { Rng, fullName, newSeed, simulateDay, standings, teamName, type ScheduledGame, type SeasonState, type Series } from '../engine';
 import type { InboxMessage, SaveGame } from '../storage/saves';
 
 export type AdvanceTarget = 'next-game' | 'week' | 'regular-end' | 'season-end';
@@ -159,5 +159,5 @@ function finalsMvp(save: SaveGame, finals: Series): string | null {
   }
   const best = [...totals.entries()].sort((a, b) => b[1] - a[1])[0];
   const p = best ? save.league.players.find((x) => x.id === best[0]) : undefined;
-  return p ? `${fullName(p)} (${playerOverall(p)})` : null;
+  return p ? fullName(p) : null;
 }

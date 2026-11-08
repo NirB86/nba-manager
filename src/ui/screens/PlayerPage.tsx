@@ -1,4 +1,4 @@
-import { ATTRIBUTE_GROUPS, fullName, playerAge, playerOverall, salaryIn, teamName, type Player } from '../../engine';
+import { ATTRIBUTE_GROUPS, displayRating, fullName, playerAge, playerOverall, salaryIn, teamName, type Player } from '../../engine';
 import { personalityTraits, potentialRange } from '../../game/scouting';
 import { useCareer } from '../career-context';
 import { Card, ImageCreditLine, Pill, PlayerPhoto } from '../components';
@@ -18,8 +18,8 @@ export function PlayerPage({ playerId }: { playerId: string }) {
   const season = league.meta.season;
   const team = league.teams.find((t) => t.id === p.teamId);
   const draftTeam = league.teams.find((t) => t.id === p.draft?.teamId);
-  const ovr = playerOverall(p);
-  const [potLo, potHi] = potentialRange(save, p);
+  const ovr = displayRating(playerOverall(p));
+  const [potLo, potHi] = potentialRange(save, p).map(displayRating) as [number, number];
   const back = team ? (team.id === save.career.teamId ? href('c', save.id, 'roster') : href('c', save.id, 'team', team.id)) : href('c', save.id, 'league');
   const colors = team?.colors ?? { primary: '#3b4150', secondary: '#c7cbd2' };
   const st = perGame(save.season.stats.regular[p.id]);
@@ -76,6 +76,13 @@ export function PlayerPage({ playerId }: { playerId: string }) {
         </div>
       </section>
 
+      {team && !mine && (
+        <div className="row-actions" style={{ marginTop: 0, marginBottom: 16 }}>
+          <a className="btn btn-primary" href={href('c', save.id, 'trade', team.id, p.id)}>
+            Trade for {p.lastName}
+          </a>
+        </div>
+      )}
       <div className="grid-2">
         <Card title="Scouting report">
           <div className="pp-attrs">

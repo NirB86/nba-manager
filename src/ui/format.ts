@@ -41,11 +41,11 @@ export function attrTone(v: number): string {
   return 'tone-poor';
 }
 
-/** Colour class for an overall rating. */
+/** Colour class for an overall rating on the displayed (2K-style) scale. */
 export function ovrTone(v: number): string {
-  if (v >= 85) return 'tone-elite';
-  if (v >= 75) return 'tone-good';
-  if (v >= 62) return 'tone-avg';
-  if (v >= 52) return 'tone-weak';
+  if (v >= 88) return 'tone-elite';
+  if (v >= 80) return 'tone-good';
+  if (v >= 70) return 'tone-avg';
+  if (v >= 62) return 'tone-weak';
   return 'tone-poor';
 }

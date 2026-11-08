@@ -141,6 +141,15 @@ export const HEIGHT_CM: Record<Position, [number, number]> = {
   C: [207, 222],
 };
 
+/**
+ * Rating as shown to the player, on the familiar 2K-style scale: a typical
+ * rotation player about 72-80, starters 80-86, stars 88-97. The simulation
+ * keeps using the internal value, so only the numbers on screen change.
+ */
+export function displayRating(internal: number): number {
+  return clamp(Math.round(internal * 0.81 + 19.75), 40, 99);
+}
+
 /** Star rating (0.5-5) for UI display, FM style. */
 export function stars(ovr: number): number {
   return clamp(Math.round(((ovr - 40) / 55) * 10) / 2, 0.5, 5);

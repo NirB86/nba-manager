@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import type { ImageCredit, Team } from '../engine';
+import { displayRating, type ImageCredit, type Team } from '../engine';
 import { attrTone, ovrTone } from './format';
 
 /** Generated team crest: a shield in the team's colors with its abbreviation. */
@@ -108,10 +108,12 @@ export function PlayerFigure({ number, colors, size = 104, tone = '#2b3550' }: {
   );
 }
 
+/** Overall rating badge. Takes the internal rating and shows the display scale. */
 export function Ovr({ value, label }: { value: number; label?: string }) {
+  const shown = displayRating(value);
   return (
-    <span className={`ovr ${ovrTone(value)}`} title={label ?? 'Overall rating'}>
-      {value}
+    <span className={`ovr ${ovrTone(shown)}`} title={label ?? 'Overall rating'}>
+      {shown}
     </span>
   );
 }

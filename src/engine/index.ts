@@ -11,3 +11,4 @@ export * from './league';
 export { Rng, newSeed } from './random';
 export * from './season';
 export * from './sim/game';
+export * from './trade';

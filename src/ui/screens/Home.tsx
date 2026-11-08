@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CAP_STATUS_LABEL, capStatus, rosterOf, playerOverall, teamPayroll, teamRating, type ScheduledGame } from '../../engine';
+import { CAP_STATUS_LABEL, capStatus, displayRating, rosterOf, playerOverall, teamPayroll, teamRating, type ScheduledGame } from '../../engine';
 import { advance, lastUserGame, nextUserGame, type AdvanceTarget, type Progress } from '../../game/advance';
 import { conferenceRank, leagueWire, ownerMood } from '../../game/news';
 import type { SaveGame } from '../../storage/saves';
@@ -51,7 +51,7 @@ function MatchupBoard() {
       <div className={`matchup-team ${right ? 'right' : ''}`}>
         <TeamBadge team={t} size={54} />
         <span className="display">{t.name}</span>
-        {score !== undefined ? <span className="matchup-score">{score}</span> : <span className="meta">{recordOf(save, teamId)} · OVR {teamRating(save.league, teamId)}</span>}
+        {score !== undefined ? <span className="matchup-score">{score}</span> : <span className="meta">{recordOf(save, teamId)} · OVR {displayRating(teamRating(save.league, teamId))}</span>}
       </div>
     );
   };
@@ -232,7 +232,7 @@ export function Home({ messageId }: { messageId?: string }) {
             </span>
             <span className="lineup-name">{`${p.firstName} ${p.lastName}`}</span>
             <span className="lineup-pos">{p.position}</span>
-            <span className="lineup-ovr">{playerOverall(p)}</span>
+            <span className="lineup-ovr">{displayRating(playerOverall(p))}</span>
           </a>
         ))}
       </div>

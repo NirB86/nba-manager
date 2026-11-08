@@ -118,6 +118,13 @@ export function TeamPage({ teamId }: { teamId: string }) {
         <Stat label="Head coach" value={<span className="stat-text">{hc ? <a className="row-link" href={href('c', save.id, 'staff', hc.id)}>{`${hc.firstName} ${hc.lastName}`}</a> : 'Vacant'}</span>} />
         <Stat label="First-round picks" value={picks.length} hint="Next 7 drafts" />
       </div>
+      {team.id !== save.career.teamId && (
+        <div className="row-actions" style={{ marginTop: 0, marginBottom: 16 }}>
+          <a className="btn btn-primary" href={href('c', save.id, 'trade', team.id)}>
+            Propose a trade
+          </a>
+        </div>
+      )}
       <RosterTable save={save} players={roster} />
       <ImageCreditLine label="Logo" image={team.logo} />
       <ImageCreditLine label="Wordmark" image={team.wordmark} />
