@@ -116,8 +116,9 @@ export function PlayerFigure({ number, colors, size = 104, tone = '#2b3550' }: {
 }
 
 /** Overall rating badge. Takes the internal rating and shows the display scale. */
-export function Ovr({ value, label }: { value: number; label?: string }) {
-  const shown = displayRating(value);
+/** Overall badge. `value` is an internal player rating unless `shown` says it is already on the display scale. */
+export function Ovr({ value, label, shown: onScreen = false }: { value: number; label?: string; shown?: boolean }) {
+  const shown = onScreen ? value : displayRating(value);
   return (
     <span className={`ovr ${ovrTone(shown)}`} title={label ?? 'Overall rating'}>
       {shown}

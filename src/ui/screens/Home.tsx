@@ -71,7 +71,7 @@ function MatchupBoard() {
       <div className={`matchup-team ${right ? 'right' : ''}`}>
         <TeamBadge team={t} size={54} />
         <span className="display">{t.name}</span>
-        {score !== undefined ? <span className="matchup-score">{score}</span> : <span className="meta">{recordOf(save, teamId)} · OVR {displayRating(teamRating(save.league, teamId))}</span>}
+        {score !== undefined ? <span className="matchup-score">{score}</span> : <span className="meta">{recordOf(save, teamId)} · OVR {teamRating(save.league, teamId)}</span>}
       </div>
     );
   };

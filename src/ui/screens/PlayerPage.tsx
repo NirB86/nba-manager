@@ -1,6 +1,9 @@
 import { ATTRIBUTE_GROUPS, displayRating, fullName, playerAge, playerOverall, salaryIn, teamName, type Player } from '../../engine';
 import { personalityTraits, potentialRange } from '../../game/scouting';
+import { useState } from 'react';
+import { negotiation } from '../../game/contracts';
 import { useCareer } from '../career-context';
+import { ContractOffer } from './ContractOffer';
 import { Card, ImageCreditLine, Pill, PlayerPhoto } from '../components';
 import { attrTone, height, money, ordinal, seasonLabel } from '../format';
 import { href } from '../router';
@@ -11,6 +14,7 @@ const POSITION: Record<Player['position'], string> = { PG: 'Point guard', SG: 'S
 
 export function PlayerPage({ playerId }: { playerId: string }) {
   const { save } = useCareer();
+  const [offering, setOffering] = useState(false);
   const { league } = save;
   const p = league.players.find((x) => x.id === playerId);
   if (!p) return <PageHeader title="Player not found" back={href('c', save.id, 'roster')} />;
@@ -45,9 +49,14 @@ export function PlayerPage({ playerId }: { playerId: string }) {
         <span className="spot-num" aria-hidden="true">
           {p.jersey}
         </span>
-        <div className="spot-photo">
-          <PlayerPhoto photo={p.photo} number={p.jersey} colors={colors} frame="portrait" boxAspect={1.25} />
-        </div>
+        {p.photo?.source === 'NBA.com' ? (
+          // Official headshots are transparent cut-outs: show the whole image, standing on the banner.
+          <img className="spot-cutout" src={p.photo.url} alt={fullName(p)} />
+        ) : (
+          <div className="spot-photo">
+            <PlayerPhoto photo={p.photo} number={p.jersey} colors={colors} frame="portrait" boxAspect={1.25} />
+          </div>
+        )}
         <div className="spot-straps">
           <span className="spot-tag">{mine ? 'Player spotlight' : team ? 'Scouting target' : 'Free agent'}</span>
           <span className="spot-name">{fullName(p)}</span>
@@ -76,13 +85,24 @@ export function PlayerPage({ playerId }: { playerId: string }) {
         </div>
       </section>
 
-      {team && !mine && (
-        <div className="row-actions" style={{ marginTop: 0, marginBottom: 16 }}>
+      <div className="row-actions player-actions">
+        {team && !mine && (
           <a className="btn btn-primary" href={href('c', save.id, 'trade', team.id, p.id)}>
             Trade for {p.lastName}
           </a>
-        </div>
-      )}
+        )}
+        {mine && (
+          <a className="btn" href={href('c', save.id, 'trade', team!.id, p.id)}>
+            Trade {p.lastName}
+          </a>
+        )}
+        {(mine || !team) && (
+          <button className="btn btn-primary" type="button" onClick={() => setOffering((v) => !v)} title={negotiation(save, p).ok ? '' : (negotiation(save, p) as { reason: string }).reason}>
+            {offering ? 'Hide contract offer' : mine ? 'Offer extension' : 'Offer contract'}
+          </button>
+        )}
+      </div>
+      {offering && <ContractOffer player={p} onDone={() => undefined} />}
       <div className="grid-2">
         <Card title="Scouting report">
           <div className="pp-attrs">

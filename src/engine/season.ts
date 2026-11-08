@@ -49,6 +49,10 @@ export interface SeasonState {
   trades?: { day: number; teams: string[]; sent: string[]; got: string[] }[];
   /** Offers the AI turned down, remembered for the rest of that day. */
   declinedDeals?: { key: string; day: number }[];
+  /** Players who turned down a contract offer, by game day. */
+  contractTalks?: { playerId: string; day: number }[];
+  /** The mid-level exception has been used this season. */
+  mleUsed?: boolean;
 }
 
 export interface Highlight {

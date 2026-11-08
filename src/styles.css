@@ -618,3 +618,18 @@ select.input { appearance: auto; }
   .matchup-star { height: 118px; }
   .matchup-vs { top: 22px; }
 }
+
+/* Player page: cut-out headshot, actions, contract offers */
+.spot-cutout { position: absolute; right: 0; bottom: 0; height: 92%; max-width: 70%; width: auto; object-fit: contain; object-position: right bottom; filter: drop-shadow(0 8px 20px rgba(0, 0, 0, 0.45)); }
+@media (min-width: 900px) { .spot-cutout { right: 4%; height: 100%; } }
+.player-actions { margin: 0 0 16px; display: flex; flex-wrap: wrap; gap: 8px; }
+.contract-offer { border-top: 4px solid var(--red); }
+.offer-form { display: grid; gap: 12px; margin: 12px 0; }
+@media (min-width: 700px) { .offer-form { grid-template-columns: 1.4fr 1fr 1fr; align-items: end; } }
+.offer-form label { display: grid; gap: 6px; }
+.offer-salary { display: flex; align-items: center; gap: 10px; }
+.offer-salary strong { font-family: var(--display); font-weight: 900; font-style: italic; font-size: 26px; min-width: 96px; text-align: center; }
+.offer-salary .btn { min-width: 40px; min-height: 36px; padding: 0; }
+.offer-form input[type='range'] { width: 100%; accent-color: var(--red); }
+.offer-verdict { margin-bottom: 12px; }
+.counter-box { display: grid; gap: 6px; padding: 10px 12px; margin-bottom: 12px; background: var(--surface-2, #f3f3f3); border-left: 4px solid var(--red); }

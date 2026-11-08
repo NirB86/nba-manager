@@ -65,7 +65,7 @@ function Career({ saveId, rest }: { saveId: string; rest: string[] }) {
       <Shell section={sectionForNav}>
         {section === 'home' && <Home messageId={arg} />}
         {section === 'roster' && <Roster />}
-        {section === 'player' && arg && <PlayerPage playerId={arg} />}
+        {section === 'player' && arg && <PlayerPage key={arg} playerId={arg} />}
         {section === 'league' && <League />}
         {section === 'team' && arg && <TeamPage teamId={arg} />}
         {section === 'finances' && <Finances />}

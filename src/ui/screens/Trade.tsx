@@ -18,7 +18,10 @@ export function Trade({ teamId, playerId }: { teamId?: string; playerId?: string
   const status = tradesOpen(save);
   const firstPartner = teamId && teamId !== me ? teamId : null;
   const [partners, setPartners] = useState<string[]>(firstPartner ? [firstPartner] : []);
-  const [moves, setMoves] = useState<TradeMove[]>(firstPartner && playerId ? [{ kind: 'player', id: playerId, from: firstPartner, to: me }] : []);
+  // From a player page: their player (with the team) or one of ours (partner chosen next).
+  const [moves, setMoves] = useState<TradeMove[]>(
+    playerId ? (firstPartner ? [{ kind: 'player', id: playerId, from: firstPartner, to: me }] : teamId === me ? [{ kind: 'player', id: playerId, from: me, to: me }] : []) : [],
+  );
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
   const [counter, setCounter] = useState<Counter | null>(null);
   const topRef = useRef<HTMLDivElement>(null);
@@ -44,6 +47,8 @@ export function Trade({ teamId, playerId }: { teamId?: string; playerId?: string
     if (!id || partners.length >= MAX_PARTNERS) return;
     setResult(null);
     setPartners((p) => [...p, id]);
+    // A player of ours picked before any partner goes to the first team added.
+    setMoves((list) => list.map((m) => (m.from === m.to ? { ...m, to: id } : m)));
   };
   const removePartner = (id: string) => {
     setResult(null);
@@ -185,6 +190,9 @@ export function Trade({ teamId, playerId }: { teamId?: string; playerId?: string
               </select>
             )}
           </div>
+          {partners.length === 0 && moves.length > 0 && (
+            <p className="notice">Choose a team to trade {league.players.find((x) => x.id === moves[0]!.id)?.lastName ?? 'him'} to.</p>
+          )}
           {partners.length > 1 && <p className="muted small" style={{ marginBottom: 12 }}>Multi-team deal: pick where each player or pick goes with the arrow menu next to it.</p>}
 
           {partners.length > 0 && (

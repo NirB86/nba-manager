@@ -62,7 +62,7 @@ export function League() {
                                 {money(s.payroll)} · {CAP_STATUS_LABEL[status]}
                               </span>
                             </span>
-                            <Ovr value={s.rating} label="Team rating" />
+                            <Ovr value={s.rating} shown label="Team rating" />
                           </a>
                         </li>
                       );
@@ -113,7 +113,7 @@ export function TeamPage({ teamId }: { teamId: string }) {
         </div>
       </div>
       <div className="stats-row">
-        <Stat label="Team rating" value={<Ovr value={summary?.rating ?? 0} />} />
+        <Stat label="Team rating" value={<Ovr value={summary?.rating ?? 0} shown />} />
         <Stat label="Payroll" value={money(summary?.payroll ?? 0)} hint={summary ? CAP_STATUS_LABEL[capStatus(league.settings, summary.payroll)] : ''} />
         <Stat label="Head coach" value={<span className="stat-text">{hc ? <a className="row-link" href={href('c', save.id, 'staff', hc.id)}>{`${hc.firstName} ${hc.lastName}`}</a> : 'Vacant'}</span>} />
         <Stat label="First-round picks" value={picks.length} hint="Next 7 drafts" />
