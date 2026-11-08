@@ -670,6 +670,14 @@ if (existsSync(arenasFile)) {
   console.log(`Arenas: ${teams.filter((t) => t.arenaPhoto).length} arena photos`);
 }
 
+// City photos for choosing a team, if cities.ts has run (free-licensed, Commons).
+const citiesFile = join(cacheDir, 'cities.json');
+if (existsSync(citiesFile)) {
+  const cities = JSON.parse(readFileSync(citiesFile, 'utf8')) as Record<string, Team['cityPhoto']>;
+  for (const t of teams) if (cities[t.id]) t.cityPhoto = cities[t.id];
+  console.log(`Cities: ${teams.filter((t) => t.cityPhoto).length} city photos`);
+}
+
 const league: LeagueFile = {
   format: LEAGUE_FORMAT,
   version: LEAGUE_FORMAT_VERSION,

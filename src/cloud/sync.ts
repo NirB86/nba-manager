@@ -62,7 +62,7 @@ export function withLatestImages(save: SaveGame, latest: CachedLeague | undefine
       teams: save.league.teams.map((t) => {
         const s = teams.get(t.id);
         // A new logo replaces the old logo and wordmark together.
-        return s ? { ...t, ...(s.logo ? { logo: s.logo, wordmark: s.wordmark } : {}), arenaPhoto: s.arenaPhoto ?? t.arenaPhoto } : t;
+        return s ? { ...t, ...(s.logo ? { logo: s.logo, wordmark: s.wordmark } : {}), arenaPhoto: s.arenaPhoto ?? t.arenaPhoto, cityPhoto: s.cityPhoto ?? t.cityPhoto } : t;
       }),
     },
   };

@@ -149,10 +149,11 @@ export function NewCareer() {
                     <button
                       key={s.team.id}
                       type="button"
-                      className={`team-card ${teamId === s.team.id ? 'on' : ''}`}
+                      className={`team-card ${teamId === s.team.id ? 'on' : ''} ${s.team.cityPhoto ? 'has-photo' : ''}`}
                       onClick={() => setTeamId(s.team.id)}
                       style={{ ['--team' as string]: s.team.colors.primary }}
                     >
+                      {s.team.cityPhoto && <img className="team-card-photo" src={s.team.cityPhoto.url} alt="" loading="lazy" />}
                       <TeamBadge team={s.team} size={44} />
                       <span className="team-card-text">
                         <strong>{teamName(s.team)}</strong>

@@ -318,8 +318,8 @@ button { font: inherit; color: inherit; }
 .steps { display: flex; gap: 6px; list-style: none; padding: 0; margin: 0 0 20px; flex-wrap: wrap; }
 .steps li { display: flex; align-items: center; gap: 6px; padding: 5px 14px 5px 6px; background: var(--surface); font-family: var(--label); font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase; font-size: 14px; color: var(--text-3); clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%); }
 .steps li span { display: grid; place-items: center; width: 22px; height: 22px; background: var(--surface-2); font-size: 12px; }
-.steps li.on { background: var(--black); color: #fff; }
-.steps li.on span { background: var(--red); color: #fff; }
+.off-steps li.on { background: var(--black); color: #fff; }
+.off-steps li.on span { background: var(--red); color: #fff; }
 .wizard-body { display: flex; flex-direction: column; gap: 16px; }
 .wizard-body.narrow { max-width: 640px; }
 .wizard-foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-top: 8px; flex-wrap: wrap; }
@@ -783,11 +783,11 @@ select.input { appearance: auto; }
 .offer-asset a { font-weight: 700; }
 
 /* Offseason */
-.steps { display: flex; gap: 4px; list-style: none; margin: 0 0 14px; padding: 0; counter-reset: step; }
-.steps li { flex: 1; padding: 8px 10px; background: #fff; font-family: var(--label); font-weight: 800; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); counter-increment: step; clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%); }
-.steps li::before { content: counter(step) '  '; }
-.steps li.on { background: var(--red); color: #fff; }
-.steps li.done { background: var(--black); color: #fff; }
+.off-steps { display: flex; gap: 4px; list-style: none; margin: 0 0 14px; padding: 0; counter-reset: step; }
+.off-steps li { flex: 1; padding: 8px 10px; background: #fff; font-family: var(--label); font-weight: 800; font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-3); counter-increment: step; clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 50%, calc(100% - 10px) 100%, 0 100%); }
+.off-steps li::before { content: counter(step) '  '; }
+.off-steps li.on { background: var(--red); color: #fff; }
+.off-steps li.done { background: var(--black); color: #fff; }
 .draft-clock { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 20px; padding: 14px 16px; margin-bottom: 16px; background: #fff; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); border-left: 6px solid var(--red); }
 .draft-clock > div:not(.draft-actions) { display: grid; gap: 4px; flex: 1; min-width: 220px; }
 .draft-clock strong { font-family: var(--label); font-weight: 900; font-style: italic; font-size: 22px; text-transform: uppercase; }
@@ -938,3 +938,13 @@ select.input { appearance: auto; }
 .cast-final { align-self: center; }
 .cast-coach .btn-timeout { background: var(--red); border-color: var(--red); color: #fff; font-family: var(--label); font-weight: 900; font-style: italic; text-transform: uppercase; }
 .cast-coach .btn-timeout:disabled { opacity: 0.4; }
+
+/* Choosing a team: city photo behind each card */
+.team-card { position: relative; overflow: hidden; isolation: isolate; }
+.team-card.has-photo { min-height: 96px; color: #fff; border-left-width: 6px; }
+.team-card-photo { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; z-index: -2; transition: transform 0.4s ease; }
+.team-card.has-photo::before { content: ''; position: absolute; inset: 0; z-index: -1; background: linear-gradient(90deg, color-mix(in srgb, var(--team) 92%, #000) 0%, color-mix(in srgb, var(--team) 70%, transparent) 45%, rgba(0, 0, 0, 0.15) 100%); }
+.team-card.has-photo .muted { color: rgba(255, 255, 255, 0.88); }
+.team-card.has-photo strong { text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5); }
+.team-card.has-photo:hover .team-card-photo { transform: scale(1.05); }
+.team-card.has-photo.on { box-shadow: 0 0 0 3px var(--red), var(--shadow); }

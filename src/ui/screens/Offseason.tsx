@@ -56,7 +56,7 @@ export function Offseason() {
   return (
     <>
       <PageHeader title={stage === 'draft' ? `${o.draftYear} Draft` : 'Free agency'} subtitle={`Offseason · ${seasonLabel(stage === 'draft' ? save.league.meta.season + 1 : save.league.meta.season)} league year`} />
-      <ol className="steps">
+      <ol className="off-steps">
         {STEPS.map((s, i) => (
           <li key={s.key} className={s.key === stage ? 'on' : STEPS.findIndex((x) => x.key === stage) > i ? 'done' : ''}>
             {s.label}

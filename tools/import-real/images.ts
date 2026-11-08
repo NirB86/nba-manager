@@ -22,7 +22,7 @@ interface ImageCache {
   teams: Record<string, { logo?: ImageCredit; wordmark?: ImageCredit }>;
 }
 
-async function getJson(url: string, init?: RequestInit): Promise<any> {
+export async function getJson(url: string, init?: RequestInit): Promise<any> {
   for (let attempt = 0; attempt < 6; attempt++) {
     const res = await fetch(url, { ...init, headers: { 'user-agent': UA, accept: 'application/json', ...(init?.headers ?? {}) } });
     if (res.ok) return res.json();
