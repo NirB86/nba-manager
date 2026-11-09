@@ -31,6 +31,7 @@ import type { InboxMessage, SaveGame } from '../storage/saves';
 import { MLE_SHARE } from './contracts';
 import { induct, recordPlayerSeasons } from './history';
 import { rollFinances } from './finance';
+import { holdouts } from './demands';
 
 export type OffseasonStage = 'draft' | 'free-agency' | 'camp';
 
@@ -73,7 +74,8 @@ export function startOffseason(original: SaveGame, rng = new Rng(newSeed())): Sa
   const draftYear = league.meta.season + 1;
   const playoffTeams = new Set(season.series.filter((s) => s.round === 1).flatMap((s) => [s.top.teamId, s.bottom.teamId]));
   const order = draftOrder(league, season.games, playoffTeams, draftYear, rng);
-  const prospects = generateDraftClass(league, rng, draftYear);
+  // The class your scouts have been watching all season, if you looked at it.
+  const prospects = save.draftScouting?.year === draftYear ? [...save.draftScouting.prospects] : generateDraftClass(league, rng, draftYear);
   save.offseason = { stage: 'draft', draftYear, order, onClock: 0, prospects, made: [], faDay: 0, birdRights: {}, mleUsed: [] };
   const me = save.career.teamId;
   const mine = order.filter((s) => s.teamId === me);
@@ -292,6 +294,9 @@ export function startNewSeason(original: SaveGame, rng = new Rng(newSeed())): Sa
   save.season = newSeason(league, rng);
   save.offseason = undefined;
   rollFinances(save);
+  save.demands = { requests: {}, mods: [] };
+  save.press = null;
+  holdouts(save, rng);
 
   const mine = rosterOf(league, me);
   const risers = mine

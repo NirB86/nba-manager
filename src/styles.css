@@ -1084,3 +1084,18 @@ select.input { appearance: auto; }
 .job-list { list-style: none; margin: 10px 0; padding: 0; display: grid; gap: 8px; }
 .job-list li { display: grid; grid-template-columns: 40px 1fr auto; gap: 12px; align-items: center; padding: 8px; background: var(--surface-2); }
 @media (max-width: 480px) { .job-list li { grid-template-columns: 40px 1fr; } .job-list li .btn { grid-column: 1 / -1; } }
+
+/* Press conferences and player demands */
+.press-card { border-top: 4px solid var(--team); }
+.press-q { display: flex; gap: 10px; align-items: flex-start; font-size: 17px; font-weight: 700; margin: 4px 0 12px; }
+.press-mic { font-size: 22px; line-height: 1; }
+.press-answers { display: grid; gap: 8px; }
+.press-answer { text-align: left; text-transform: none; font-weight: 600; white-space: normal; height: auto; padding: 10px 12px; display: grid; gap: 2px; justify-items: start; }
+.press-effects { font-size: 12px; color: var(--text-3); font-weight: 700; letter-spacing: 0.02em; }
+.demand-notice { border-left-color: var(--warn) !important; margin-bottom: 12px; display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+
+/* Draft scouting */
+.know-bar { display: inline-block; width: 64px; height: 8px; background: var(--surface-2); border: 1px solid var(--border); vertical-align: middle; }
+.know-bar i { display: block; height: 100%; background: var(--good); }
+tr.focus-row td:first-child { box-shadow: inset 3px 0 0 var(--team); }
+@media (max-width: 480px) { .know-bar { width: 36px; } }

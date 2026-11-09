@@ -4,6 +4,7 @@
 
 import { marketSalary, playerAge, playerOverall, rosterOf, salaryIn, standings, type Player } from '../engine';
 import type { SaveGame } from '../storage/saves';
+import { activeMods } from './demands';
 
 export type MoraleLevel = 'thrilled' | 'happy' | 'content' | 'unhappy' | 'angry';
 
@@ -82,6 +83,9 @@ export function morale(save: SaveGame, p: Player): Morale {
   // Personality: loyal players stay steadier, big egos swing harder.
   if (p.personality.loyalty >= 15) reasons.push({ text: 'Loyal to the franchise.', effect: 1 });
   if (ego >= 16) reasons.push({ text: 'Big ego: needs to feel like the star.', effect: rank > 1 ? -1 : 0.5 });
+
+  // Promises, press conferences and trade requests.
+  for (const m of activeMods(save, p.id)) reasons.push(m);
 
   if (!reasons.length) reasons.push({ text: 'Settled in: no complaints.', effect: 0 });
   const score = Math.max(-10, Math.min(10, 1 + reasons.reduce((s, r) => s + r.effect, 0)));

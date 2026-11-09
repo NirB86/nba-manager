@@ -3,6 +3,7 @@
 // chance of a yes, and a refusal comes with the player's counter offer.
 
 import { Rng, buildContract, capStatus, fullName, marketSalary, maxSalaryShare, playerAge, playerOverall, projectedCba, rosterOf, teamPayroll, teamStrategy, type Contract, type Player } from '../engine';
+import { endHoldout } from './demands';
 import type { SaveGame } from '../storage/saves';
 import { morale } from './morale';
 import { potentialRange } from './scouting';
@@ -231,6 +232,7 @@ function sign(original: SaveGame, playerId: string, n: Negotiation, offer: Offer
     while (taken.has(p.jersey)) p.jersey = (p.jersey + 1) % 100;
     if (n.budget?.how === 'mid-level exception') save.season.mleUsed = true;
   }
+  endHoldout(save, p.id);
   const money = (v: number) => `$${(v / 1e6).toFixed(1)}M`;
   const totalValue = p.contract.years.filter((y) => y.season >= n.firstSeason).reduce((s, y) => s + y.salary, 0);
   save.inbox.unshift({

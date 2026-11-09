@@ -6,6 +6,7 @@ import { convertTwoWay, signTwoWay, twoWayEligible, waiveCost, waivePlayer, type
 import { morale, MORALE_LABEL } from '../../game/morale';
 import { playerHonors } from '../../game/awards';
 import { careerTotals } from '../../game/history';
+import { promiseMinutes } from '../../game/demands';
 import { useCareer } from '../career-context';
 import { ContractOffer } from './ContractOffer';
 import { FitReportCard } from './Scouting';
@@ -96,6 +97,7 @@ export function PlayerPage({ playerId }: { playerId: string }) {
       </section>
 
       <HonorBadges playerId={p.id} />
+      <DemandNotice player={p} />
       {save.season.injuries?.[p.id] && (
         <div className="notice injury-notice">
           <strong>Injured: {save.season.injuries[p.id]!.type}.</strong>{' '}
@@ -393,5 +395,36 @@ function CareerStats({ player }: { player: Player }) {
       </div>
       <p className="muted small">Career totals: {tot.pts.toLocaleString()} points, {tot.reb.toLocaleString()} rebounds, {tot.ast.toLocaleString()} assists{player.experience + 1 > tot.seasons ? ` (seasons before ${seasonLabel(rows[0]!.season)} are not in this league file)` : ''}.</p>
     </Card>
+  );
+}
+
+/** Trade request (with a promise you can make) and contract holdouts. */
+function DemandNotice({ player }: { player: Player }) {
+  const { save, update } = useCareer();
+  if (player.teamId !== save.career.teamId) return null;
+  const req = save.demands?.requests[player.id];
+  const hold = save.season.holdouts?.[player.id];
+  if (!req && !hold) return null;
+  return (
+    <>
+      {hold ? (
+        <div className="notice demand-notice">
+          <strong>Holding out for a new contract.</strong> He misses games until you sign him to an extension (Offer contract below), or about {hold} more game{hold === 1 ? '' : 's'} until he reports.
+        </div>
+      ) : null}
+      {req ? (
+        <div className="notice demand-notice">
+          <strong>{req.leaked ? 'Has asked for a trade (public).' : 'Has asked for a trade.'}</strong>{' '}
+          {req.promise
+            ? `You promised him about ${req.promise.minutes} minutes a game. Your word is checked on day ${req.promise.due + 1}.`
+            : 'Trade him, or promise him a bigger role and set it in the depth chart.'}
+          {!req.promise && (
+            <button type="button" className="btn btn-sm" onClick={() => update((s) => promiseMinutes(s, player.id))}>
+              Promise more minutes
+            </button>
+          )}
+        </div>
+      ) : null}
+    </>
   );
 }

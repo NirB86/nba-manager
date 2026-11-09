@@ -10,6 +10,10 @@ export function potentialRange(save: SaveGame, player: Player): [number, number]
   const best = Math.max(1, ...scouts.map((s) => Math.round((s.ratings.judgment + s.ratings.scouting) / 2)));
   let spread = Math.max(1, Math.round((21 - best) / 3));
   if (player.teamId === save.career.teamId) spread = Math.max(1, Math.round(spread / 2));
+  // Draft prospects: scouting work during the season narrows (or, unscouted, widens) the range.
+  const ds = save.draftScouting;
+  const known = ds && (save.offseason?.draftYear ?? ds.year) === ds.year ? ds.knowledge[player.id] : undefined;
+  if (known !== undefined || (ds && ds.prospects.some((x) => x.id === player.id))) spread = Math.max(1, Math.round(spread * (1.6 - (known ?? 0) / 100)));
   const ovr = playerOverall(player);
   // No growth left: scouts agree the player is at his peak.
   if (player.potential <= ovr) return [ovr, ovr];

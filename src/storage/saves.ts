@@ -5,6 +5,9 @@
 import type { LeagueSeasonRecord } from '../game/awards';
 import type { HallOfFamer, Records } from '../game/history';
 import type { FinanceState, JobOffer } from '../game/finance';
+import type { Demands } from '../game/demands';
+import type { PressConference } from '../game/press';
+import type { DraftScouting } from '../game/draft-scouting';
 import type { OffseasonState } from '../game/offseason';
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import { Rng, newSeason, newSeed, validateLeague, teamName, type LeagueFile, type SeasonState } from '../engine';
@@ -71,6 +74,12 @@ export interface SaveGame {
   finance?: FinanceState;
   /** Teams that want to hire you (after being fired, or after a great season). */
   jobOffers?: JobOffer[];
+  /** Trade requests and temporary morale effects. */
+  demands?: Demands;
+  /** A press conference waiting for your answer. */
+  press?: PressConference | null;
+  /** Draft scouting: where your scouts are looking, and what they know about each prospect. */
+  draftScouting?: DraftScouting;
 }
 
 export interface SaveSummary {

@@ -58,6 +58,8 @@ export interface SeasonState {
   offers?: { id: string; fromTeam: string; deal: MultiTrade; day: number; expiresDay: number; status: 'open' | 'accepted' | 'declined' | 'expired' }[];
   /** Latest rumors and AI-to-AI trades for the league wire, newest first. */
   rumors?: string[];
+  /** Players sitting out for a new contract: games left by player id. */
+  holdouts?: Record<string, number>;
   /** Current injuries by player id. */
   injuries?: Record<string, Injury>;
   /** Season awards, set when the regular season ends (Finals MVP after the Finals). */
@@ -148,6 +150,13 @@ export function updateInjuries(league: LeagueFile, season: SeasonState, result: 
     if (!p || !p.teamId || !teams.has(p.teamId)) continue;
     inj.gamesLeft--;
     if (inj.gamesLeft <= 0) delete injuries[id];
+  }
+  // Holdouts sit out their team's games; the count runs down either way.
+  for (const [id, left] of Object.entries(season.holdouts ?? {})) {
+    const p = league.players.find((x) => x.id === id);
+    if (!p?.teamId || !teams.has(p.teamId)) continue;
+    if (left <= 1) delete season.holdouts![id];
+    else season.holdouts![id] = left - 1;
   }
   const fresh: Injury[] = [];
   for (const side of [result.home, result.away]) {
@@ -350,7 +359,7 @@ function addStats(table: Record<string, StatTotals>, result: GameResult) {
 /** Players available tonight: injured players sit, unless a team would have fewer than eight. */
 export function availablePlayers(league: LeagueFile, season: SeasonState, teamId: string) {
   const all = league.players.filter((p) => p.teamId === teamId);
-  const healthy = all.filter((p) => !season.injuries?.[p.id]);
+  const healthy = all.filter((p) => !season.injuries?.[p.id] && !season.holdouts?.[p.id]);
   return healthy.length >= 8 ? healthy : all;
 }
 

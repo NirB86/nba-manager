@@ -80,7 +80,9 @@ function DraftRoom({ busy, act }: { busy: boolean; act: (fn: () => void) => void
     const [lo, hi] = potentialRange(save, p).map(displayRating) as [number, number];
     return lo === hi ? `${lo}` : `${lo}-${hi}`;
   };
-  const board = [...o.prospects].sort((a, b) => (b.potential + playerOverall(b)) - (a.potential + playerOverall(a)));
+  // Ordered by what your scouts think (never the hidden potential itself).
+  const est = (p: (typeof o.prospects)[number]) => potentialRange(save, p).reduce((x, y) => x + y, 0) / 2;
+  const board = [...o.prospects].sort((a, b) => est(b) + playerOverall(b) - (est(a) + playerOverall(a)));
 
   return (
     <>

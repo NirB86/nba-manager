@@ -3,6 +3,7 @@ import { CAP_STATUS_LABEL, capStatus, displayRating, rosterOf, playerOverall, te
 import { advance, advanceToGameDay, finishLiveGame, lastUserGame, nextUserGame, type AdvanceTarget, type Progress } from '../../game/advance';
 import { allStarDay } from '../../game/awards';
 import { acceptJob, declineOffers, financeView } from '../../game/finance';
+import { answerPress } from '../../game/press';
 import { ownerExpectation } from '../../game/career';
 import { conferenceRank, leagueWire, ownerMood } from '../../game/news';
 import { morale, MORALE_LABEL, type MoraleLevel } from '../../game/morale';
@@ -298,6 +299,7 @@ export function Home({ messageId }: { messageId?: string }) {
       <MatchupBoard />
       <Ticker />
       <JobOffers />
+      <PressCard />
 
       {headline && (
         <a className="headline" href={href('c', save.id, 'home', headline.id)}>
@@ -529,6 +531,40 @@ function JobOffers() {
           Stay with my team
         </button>
       )}
+    </section>
+  );
+}
+
+/** The media wants an answer: what you say moves morale and the owner. */
+function PressCard() {
+  const { save, update } = useCareer();
+  const pc = save.press;
+  if (!pc || pc.season !== save.league.meta.season || pc.expires < save.season.day) return null;
+  const p = pc.playerId ? save.league.players.find((x) => x.id === pc.playerId) : undefined;
+  return (
+    <section className="card press-card">
+      <header className="card-head">
+        <h2>Press conference</h2>
+        <span className="muted small">{pc.expires - save.season.day} days to answer</span>
+      </header>
+      <p className="press-q">
+        <span className="press-mic" aria-hidden>
+          🎤
+        </span>
+        {pc.question}
+      </p>
+      <div className="press-answers">
+        {pc.answers.map((a, i) => (
+          <button key={i} type="button" className="btn press-answer" onClick={() => update((s) => answerPress(s, i))}>
+            {a.label}
+            <span className="press-effects">
+              {[a.team ? `Team ${a.team > 0 ? '▲' : '▼'}` : '', a.player && p ? `${p.lastName} ${a.player > 0 ? '▲' : '▼'}` : '', a.owner ? `Owner ${a.owner > 0 ? '▲' : '▼'}` : '']
+                .filter(Boolean)
+                .join(' · ')}
+            </span>
+          </button>
+        ))}
+      </div>
     </section>
   );
 }

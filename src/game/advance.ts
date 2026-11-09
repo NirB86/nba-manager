@@ -4,6 +4,9 @@
 import { Rng, fullName, newSeed, playerOverall, simulateDay, standings, teamName, type DayReport, type GameResult, type PlayEvent, type ScheduledGame, type SeasonState } from '../engine';
 import type { InboxMessage, SaveGame } from '../storage/saves';
 import { weeklyMarket } from './market';
+import { weeklyDemands } from './demands';
+import { weeklyScouting } from './draft-scouting';
+import { maybePress } from './press';
 import { assessTax, financeDay, ownerVerdict } from './finance';
 import { RECORD_LABEL, RECORD_NEWS, updateRecords } from './history';
 import { announceAwards, computeFinalsMvp, maybeAllStar, seasonReview } from './awards';
@@ -60,7 +63,14 @@ function afterDay(save: SaveGame, report: DayReport, rng: Rng, before: { phase: 
       save.inbox.unshift(message(save, `record-${stat}-${season.day}`, 'Head coach', `Record night: ${rec.value} ${RECORD_LABEL[stat].toLowerCase()}`, `${rec.name} set a new single-game record in this league with ${rec.value} ${RECORD_LABEL[stat].toLowerCase()} against the ${opp?.name ?? 'opponent'}.`));
   }
   // Once a game week: offers, AI trades and rumors.
-  if (season.phase === 'regular' && season.day !== before.day && season.day % 7 === 0) weeklyMarket(save, rng);
+  if (season.phase !== 'done' && season.day !== before.day && season.day % 7 === 0) {
+    if (season.phase === 'regular') {
+      weeklyMarket(save, rng);
+      weeklyDemands(save, rng);
+      weeklyScouting(save);
+    }
+    maybePress(save, rng);
+  }
   if (season.phase === 'regular' && season.day !== before.day) maybeAllStar(save, rng);
   financeDay(save, report, before.day);
   if (report.phaseChanged) {
