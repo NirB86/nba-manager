@@ -2,6 +2,7 @@ import { ATTRIBUTE_GROUPS, displayRating, fullName, playerAge, playerOverall, sa
 import { personalityTraits, potentialRange } from '../../game/scouting';
 import { useState } from 'react';
 import { negotiation } from '../../game/contracts';
+import { convertTwoWay, signTwoWay, twoWayEligible, waiveCost, waivePlayer, type MoveResult } from '../../game/roster';
 import { morale, MORALE_LABEL } from '../../game/morale';
 import { useCareer } from '../career-context';
 import { ContractOffer } from './ContractOffer';
@@ -15,8 +16,13 @@ import { f1, pct, perGame } from './Season';
 const POSITION: Record<Player['position'], string> = { PG: 'Point guard', SG: 'Shooting guard', SF: 'Small forward', PF: 'Power forward', C: 'Center' };
 
 export function PlayerPage({ playerId }: { playerId: string }) {
-  const { save } = useCareer();
+  const { save, update } = useCareer();
   const [offering, setOffering] = useState(false);
+  const [moveMsg, setMoveMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const move = (r: MoveResult) => {
+    if (r.ok) update(() => r.save);
+    setMoveMsg({ ok: r.ok, text: r.message });
+  };
   const { league } = save;
   const p = league.players.find((x) => x.id === playerId);
   if (!p) return <PageHeader title="Player not found" back={href('c', save.id, 'roster')} />;
@@ -104,12 +110,44 @@ export function PlayerPage({ playerId }: { playerId: string }) {
             Trade {p.lastName}
           </a>
         )}
+        {mine && p.contract?.kind === 'two-way' && (
+          <button className="btn" type="button" onClick={() => move(convertTwoWay(save, p.id))}>
+            Convert to standard
+          </button>
+        )}
+        {!team && twoWayEligible(save, p).ok && (
+          <button className="btn" type="button" onClick={() => move(signTwoWay(save, p.id))}>
+            Sign two-way
+          </button>
+        )}
+        {mine && (
+          <button
+            className="btn btn-ghost"
+            type="button"
+            onClick={() => {
+              const cost = waiveCost(save, p);
+              const m = (v: number) => `${(v / 1e6).toFixed(1)}M`;
+              const text =
+                p.contract?.kind === 'two-way'
+                  ? `Waive ${fullName(p)}? Two-way deals leave no dead money.`
+                  : `Waive ${fullName(p)}? Unless another team claims him, ${m(cost.now + cost.later)} stays on your cap as dead money (${m(cost.now)} this season).`;
+              if (window.confirm(text)) move(waivePlayer(save, p.id));
+            }}
+          >
+            Waive
+          </button>
+        )}
         {(mine || !team) && (
           <button className="btn btn-primary" type="button" onClick={() => setOffering((v) => !v)} title={negotiation(save, p).ok ? '' : (negotiation(save, p) as { reason: string }).reason}>
             {offering ? 'Hide contract offer' : mine ? 'Offer extension' : 'Offer contract'}
           </button>
         )}
       </div>
+      {moveMsg && (
+        <div className="notice" style={{ borderLeftColor: moveMsg.ok ? 'var(--good)' : 'var(--bad)' }}>
+          {moveMsg.text}
+        </div>
+      )}
       {offering && <ContractOffer player={p} onDone={() => undefined} />}
       <div className="grid-2">
         <Card title="Scouting report">

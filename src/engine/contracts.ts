@@ -78,9 +78,13 @@ export function salaryIn(player: Player, season: number): number {
 }
 
 export function teamPayroll(league: LeagueFile, teamId: string, season: number): number {
-  return league.players
-    .filter((p) => p.teamId === teamId && p.contract?.kind !== 'two-way')
-    .reduce((sum, p) => sum + salaryIn(p, season), 0);
+  const players = league.players.filter((p) => p.teamId === teamId && p.contract?.kind !== 'two-way').reduce((sum, p) => sum + salaryIn(p, season), 0);
+  return players + deadMoneyIn(league, teamId, season);
+}
+
+/** Salary still owed to waived players, for one season. */
+export function deadMoneyIn(league: LeagueFile, teamId: string, season: number): number {
+  return (league.deadMoney ?? []).filter((d) => d.teamId === teamId).reduce((sum, d) => sum + (d.years.find((y) => y.season === season)?.salary ?? 0), 0);
 }
 
 /** Cap figures projected forward using the league's growth rate. */

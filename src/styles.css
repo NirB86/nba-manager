@@ -1001,3 +1001,4 @@ select.input { appearance: auto; }
 .injury-pill { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; padding: 1px 6px; background: var(--red); color: #fff; font-family: var(--label); font-weight: 800; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; }
 .injury-notice { border-left-color: var(--red) !important; margin-bottom: 12px; }
 .injury-line { margin: -4px 0 10px; font-size: 14px; }
+.dead-row td { color: var(--text-3); font-style: italic; }

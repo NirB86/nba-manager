@@ -41,6 +41,9 @@ export function validateLeague(data: unknown): ValidationResult {
   for (const key of ['conferences', 'teams', 'players', 'staff', 'draftPicks'] as const) {
     if (!Array.isArray(data[key])) err(`"${key}" must be a list.`);
   }
+  if (data.deadMoney !== undefined && !(Array.isArray(data.deadMoney) && data.deadMoney.every((d) => isObj(d) && typeof d.teamId === 'string' && Array.isArray(d.years)))) {
+    err('"deadMoney" must be a list of { teamId, playerId, name, years }.');
+  }
   if (errors.length) return { ok: false, errors, warnings };
 
   const league = data as unknown as LeagueFile;

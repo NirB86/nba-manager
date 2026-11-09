@@ -4,7 +4,7 @@
 // See docs/league-format.md for the human-readable spec.
 
 export const LEAGUE_FORMAT = 'nbam-league';
-export const LEAGUE_FORMAT_VERSION = 6;
+export const LEAGUE_FORMAT_VERSION = 7;
 
 export type Id = string;
 export type Position = 'PG' | 'SG' | 'SF' | 'PF' | 'C';
@@ -22,6 +22,15 @@ export interface LeagueFile {
   players: Player[];
   staff: Staff[];
   draftPicks: DraftPick[];
+  /** Optional (format v7): salary still owed to waived players, counted on the cap. */
+  deadMoney?: DeadMoney[];
+}
+
+export interface DeadMoney {
+  teamId: Id;
+  playerId: Id;
+  name: string;
+  years: { season: number; salary: number }[];
 }
 
 export interface LeagueMeta {

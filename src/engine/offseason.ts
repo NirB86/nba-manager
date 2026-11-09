@@ -216,6 +216,8 @@ export function rollOverLeagueYear(league: LeagueFile) {
   }
   // Everyone who was in the league gains a season; this summer's draft picks start at zero.
   for (const p of league.players) if ((p.teamId || p.contract) && p.draft?.season !== year + 1) p.experience += 1;
+  // Dead money for seasons that are over drops off.
+  league.deadMoney = (league.deadMoney ?? []).map((d) => ({ ...d, years: d.years.filter((y) => y.season >= year + 1) })).filter((d) => d.years.length);
 }
 
 /** Players whose contract has no season left in the current league year. Their teams lose them. */

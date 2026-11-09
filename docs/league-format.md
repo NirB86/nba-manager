@@ -1,4 +1,4 @@
-# League file format (version 6)
+# League file format (version 7)
 
 A league file is one JSON document that holds everything a new career starts
 from. The game ships with a generator for fictional leagues; any other league
@@ -11,8 +11,9 @@ The TypeScript definition is `src/engine/types.ts` and `validateLeague()` in
 | Field | Type | Notes |
 | --- | --- | --- |
 | `format` | `"nbam-league"` | Required, fixed value |
-| `version` | number | `6` (versions 1 to 5 still load) |
+| `version` | number | `7` (versions 1 to 6 still load) |
 | `meta` | object | `name`, `season` (year the season starts: 2026 = 2026-27), `source` (`fictional`, `real`, `custom`), `createdAt`, optional `seed`, optional `logo` and `draftLogo` (images, same shape as a player photo; version 3) |
+| `deadMoney` | list | Optional (v7): salary still owed to waived players, `{ teamId, playerId, name, years: [{ season, salary }] }`; counts on that team's payroll |
 | `settings` | object | Cap figures and roster rules, below |
 | `conferences` | list | Each `{ id, name, divisions: [{ id, name }] }` |
 | `teams` | list | Below |

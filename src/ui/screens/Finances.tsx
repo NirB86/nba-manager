@@ -131,6 +131,23 @@ export function Finances() {
                   })}
                 </tr>
               ))}
+              {(league.deadMoney ?? [])
+                .filter((d) => d.teamId === teamId && d.years.some((y) => seasons.includes(y.season)))
+                .map((d) => (
+                  <tr key={`dead-${d.playerId}`} className="dead-row">
+                    <td>
+                      {d.name} <span className="muted small">· waived (dead money)</span>
+                    </td>
+                    {seasons.map((s) => {
+                      const v = d.years.find((y) => y.season === s)?.salary ?? 0;
+                      return (
+                        <td key={s} className="num">
+                          {v ? money(v) : ''}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
             </tbody>
             <tfoot>
               <tr>
