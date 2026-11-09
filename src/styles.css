@@ -1002,3 +1002,17 @@ select.input { appearance: auto; }
 .injury-notice { border-left-color: var(--red) !important; margin-bottom: 12px; }
 .injury-line { margin: -4px 0 10px; font-size: 14px; }
 .dead-row td { color: var(--text-3); font-style: italic; }
+
+/* Season honors: badges on player pages, awards card on Home. */
+.honors { display: flex; flex-wrap: wrap; gap: 6px; list-style: none; margin: 0 0 12px; padding: 0; }
+.honor { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.03em; padding: 4px 9px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text-2); }
+.honor b { color: var(--text); }
+.honor.gold { background: linear-gradient(135deg, #f7d774, #c9962b); border-color: #b98a24; color: #2b1d00; }
+.honor.gold b { color: #2b1d00; }
+.honors-list { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 0; }
+.honors-list dt { color: var(--text-3); font-size: 13px; }
+.honors-list dd { margin: 0; min-width: 0; }
+.allnba { margin-top: 10px; }
+.allnba summary { cursor: pointer; font-weight: 600; }
+.honors-soon { margin: 4px 0 12px; }
+@media (max-width: 480px) { .honors-list { grid-template-columns: 1fr; gap: 2px; } .honors-list dd { margin-bottom: 6px; } }

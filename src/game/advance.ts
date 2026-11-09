@@ -1,9 +1,10 @@
 // Advancing time in a career: plays days of the season and writes news to
 // the inbox. Runs in small chunks so the screen stays responsive.
 
-import { Rng, fullName, newSeed, playerOverall, simulateDay, standings, teamName, type DayReport, type GameResult, type PlayEvent, type ScheduledGame, type SeasonState, type Series } from '../engine';
+import { Rng, fullName, newSeed, playerOverall, simulateDay, standings, teamName, type DayReport, type GameResult, type PlayEvent, type ScheduledGame, type SeasonState } from '../engine';
 import type { InboxMessage, SaveGame } from '../storage/saves';
 import { weeklyMarket } from './market';
+import { announceAwards, computeFinalsMvp, maybeAllStar, seasonReview } from './awards';
 
 export type AdvanceTarget = 'next-game' | 'week' | 'regular-end' | 'season-end';
 
@@ -39,6 +40,24 @@ export function lastUserGame(save: SaveGame): ScheduledGame | null {
 
 function message(save: SaveGame, id: string, from: string, subject: string, body: string): InboxMessage {
   return { id: `${id}-${save.season.year}`, from, subject, body, date: dateLabel(save.season), read: false };
+}
+
+/**
+ * Everything that follows a simulated day: injury news, the weekly trade
+ * market, the All-Star break, and news (awards, series, the title) when
+ * the season moves to a new stage.
+ */
+function afterDay(save: SaveGame, report: DayReport, rng: Rng, before: { phase: SeasonState['phase']; series: number; day: number }) {
+  const { season } = save;
+  injuryNews(save, report);
+  // Once a game week: offers, AI trades and rumors.
+  if (season.phase === 'regular' && season.day !== before.day && season.day % 7 === 0) weeklyMarket(save, rng);
+  if (season.phase === 'regular' && season.day !== before.day) maybeAllStar(save, rng);
+  if (report.phaseChanged) {
+    if (before.phase === 'regular' && season.phase === 'playoffs') announceAwards(save);
+    news(save, before.phase, before.series);
+    if (season.phase === 'done') seasonReview(save);
+  }
 }
 
 /** Injury news: your players to the inbox, stars elsewhere to the league wire. */
@@ -80,13 +99,9 @@ export async function advanceToGameDay(original: SaveGame): Promise<SaveGame> {
   for (let guard = 0; guard < 200 && season.phase === 'regular'; guard++) {
     const next = season.games.filter((g) => g.hs === undefined && (g.home === me || g.away === me)).sort((a, b) => a.day - b.day)[0];
     if (!next || next.day <= season.day) break;
-    const phaseBefore = season.phase;
-    const seriesBefore = season.series.length;
-    const dayBefore = season.day;
+    const before = { phase: season.phase, series: season.series.length, day: season.day };
     const report = simulateDay(league, season, rng, (g) => g.home === me || g.away === me);
-    injuryNews(save, report);
-    if (season.phase === 'regular' && season.day !== dayBefore && season.day % 7 === 0) weeklyMarket(save, rng);
-    if (report.phaseChanged) news(save, phaseBefore, seriesBefore);
+    afterDay(save, report, rng, before);
     if (guard % 6 === 5) await new Promise((r) => setTimeout(r, 0));
   }
   return save;
@@ -98,13 +113,9 @@ export async function finishLiveGame(original: SaveGame, gameId: string, result:
   const { league, season } = save;
   const me = save.career.teamId;
   const rng = new Rng(newSeed());
-  const phaseBefore = season.phase;
-  const seriesBefore = season.series.length;
-  const dayBefore = season.day;
+  const before = { phase: season.phase, series: season.series.length, day: season.day };
   const report = simulateDay(league, season, rng, (g) => g.home === me || g.away === me || g.id.startsWith('finals'), undefined, { [gameId]: result });
-  injuryNews(save, report);
-  if (season.phase === 'regular' && season.day !== dayBefore && season.day % 7 === 0) weeklyMarket(save, rng);
-  if (report.phaseChanged) news(save, phaseBefore, seriesBefore);
+  afterDay(save, report, rng, before);
   return save;
 }
 
@@ -134,17 +145,12 @@ export async function advance(original: SaveGame, target: AdvanceTarget, onProgr
   const estimate = target === 'season-end' ? regularDays - season.day + 70 : target === 'regular-end' ? regularDays - season.day : 7;
   let steps = 0;
   for (;;) {
-    const phaseBefore = season.phase;
-    const seriesBefore = season.series.length;
-    const dayBefore = season.day;
+    const before = { phase: season.phase, series: season.series.length, day: season.day };
     const report = simulateDay(league, season, rng, (g) => isMine(g) || g.id.startsWith('finals'), onPlayByPlay ? isMine : undefined);
-    injuryNews(save, report);
     for (const p of report.played) if (p.log && onPlayByPlay) onPlayByPlay(p.game.id, p.log);
     steps++;
-    // Once a game week: offers, AI trades and rumors.
-    if (season.phase === 'regular' && season.day !== dayBefore && season.day % 7 === 0) weeklyMarket(save, rng);
+    afterDay(save, report, rng, before);
     const playedMine = report.played.some((p) => isMine(p.game));
-    if (report.phaseChanged) news(save, phaseBefore, seriesBefore);
     if (steps % 4 === 0) {
       onProgress?.({ done: steps, total: Math.max(steps, estimate), label: dateLabel(season) });
       await new Promise((r) => setTimeout(r, 0));
@@ -204,7 +210,9 @@ function news(save: SaveGame, phaseBefore: SeasonState['phase'], seriesBefore: n
 
   if (season.phase === 'done' && season.champion) {
     const finals = season.series.find((s) => s.round === 4);
-    const mvp = finals ? finalsMvp(save, finals) : null;
+    const mvpId = computeFinalsMvp(save);
+    const mvpP = mvpId ? league.players.find((x) => x.id === mvpId) : undefined;
+    const mvp = mvpP ? fullName(mvpP) : null;
     push(message(save, 'champion', 'League office', season.champion === me ? 'WE ARE CHAMPIONS!' : `${name(season.champion)} win the title`,
       `${name(season.champion)} won the NBA Finals${finals ? ` ${Math.max(...finals.wins)}-${Math.min(...finals.wins)}` : ''}.${mvp ? ` Finals MVP: ${mvp}.` : ''} The offseason starts from the home screen: draft lottery, the draft, free agency, then training camp.`));
   }
@@ -215,15 +223,3 @@ function playoffBound(save: SaveGame): boolean {
   return save.season.series.some((s) => s.top.teamId === me || s.bottom.teamId === me);
 }
 
-function finalsMvp(save: SaveGame, finals: Series): string | null {
-  const totals = new Map<string, number>();
-  for (const g of finals.games) {
-    const box = save.season.boxScores[g.id];
-    if (!box) continue;
-    const side = box.home.teamId === finals.winner ? box.home : box.away;
-    for (const l of side.lines) totals.set(l.playerId, (totals.get(l.playerId) ?? 0) + l.pts + 1.2 * (l.orb + l.drb) + 1.5 * l.ast);
-  }
-  const best = [...totals.entries()].sort((a, b) => b[1] - a[1])[0];
-  const p = best ? save.league.players.find((x) => x.id === best[0]) : undefined;
-  return p ? fullName(p) : null;
-}

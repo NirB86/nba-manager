@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { CAP_STATUS_LABEL, capStatus, displayRating, rosterOf, playerOverall, teamPayroll, teamRating, type GameResult, type ImageCredit, type Player, type ScheduledGame } from '../../engine';
 import { advance, advanceToGameDay, finishLiveGame, lastUserGame, nextUserGame, type AdvanceTarget, type Progress } from '../../game/advance';
+import { allStarDay } from '../../game/awards';
 import { conferenceRank, leagueWire, ownerMood } from '../../game/news';
 import { morale, MORALE_LABEL, type MoraleLevel } from '../../game/morale';
 import type { SaveGame } from '../../storage/saves';
@@ -376,6 +377,7 @@ export function Home({ messageId }: { messageId?: string }) {
       </div>
 
       <LockerRoom />
+      <SeasonHonors />
 
       <Card title="Inbox" action={<Pill tone="accent">{save.inbox.filter((m) => !m.read).length} new</Pill>}>
         <ul className="inbox">
@@ -390,5 +392,82 @@ export function Home({ messageId }: { messageId?: string }) {
         </ul>
       </Card>
     </>
+  );
+}
+
+/** All-Star Game result, the season's awards and the owner's grade, once they exist. */
+function SeasonHonors() {
+  const { save } = useCareer();
+  const { league, season } = save;
+  const as = season.allStar;
+  const a = season.awards;
+  const review = save.career.reviews?.find((r) => r.season === league.meta.season);
+  const player = (id: string | null | undefined) => (id ? league.players.find((p) => p.id === id) : undefined);
+  const link = (id: string | null | undefined) => {
+    const p = player(id);
+    if (!p) return <span className="muted">—</span>;
+    const t = league.teams.find((x) => x.id === p.teamId);
+    return (
+      <a className="row-link" href={href('c', save.id, 'player', p.id)}>
+        {p.firstName} {p.lastName} <span className="muted small">{t?.abbrev}</span>
+      </a>
+    );
+  };
+  if (!as && !a) {
+    if (season.phase !== 'regular') return null;
+    const left = allStarDay(season) - season.day;
+    return left > 0 ? <p className="muted small honors-soon">All-Star Game in {left} day{left === 1 ? '' : 's'}.</p> : null;
+  }
+  const confName = (id: string) => league.conferences.find((c) => c.id === id)?.name ?? id;
+  return (
+    <Card title="Season honors" className="honors-card" action={review && <Pill tone={review.grade.startsWith('A') ? 'good' : review.grade === 'B' ? 'accent' : review.grade === 'C' ? 'neutral' : 'bad'}>Owner grade {review.grade}</Pill>}>
+      <dl className="honors-list">
+        {a && (
+          <>
+            <dt>MVP</dt>
+            <dd>{link(a.mvp)}</dd>
+            {a.finalsMvp && (
+              <>
+                <dt>Finals MVP</dt>
+                <dd>{link(a.finalsMvp)}</dd>
+              </>
+            )}
+            <dt>Rookie of the Year</dt>
+            <dd>{link(a.roy)}</dd>
+            <dt>Sixth Man</dt>
+            <dd>{link(a.sixth)}</dd>
+            <dt>Defensive Player</dt>
+            <dd>{link(a.dpoy)}</dd>
+          </>
+        )}
+        {as && (
+          <>
+            <dt>All-Star Game</dt>
+            <dd>
+              {Object.entries(as.score)
+                .map(([c, pts]) => `${confName(c)} ${pts}`)
+                .join(' – ')}{' '}
+              · MVP {link(as.mvp)}
+            </dd>
+          </>
+        )}
+      </dl>
+      {a && (
+        <details className="allnba">
+          <summary>All-NBA teams</summary>
+          {a.allNba.map((t, i) => (
+            <p key={i} className="small">
+              <strong>{['1st', '2nd', '3rd'][i]}:</strong>{' '}
+              {t.map((id, k) => (
+                <span key={id}>
+                  {k > 0 && ', '}
+                  {link(id)}
+                </span>
+              ))}
+            </p>
+          ))}
+        </details>
+      )}
+    </Card>
   );
 }

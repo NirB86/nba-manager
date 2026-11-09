@@ -2,6 +2,7 @@
 // settings plus the full league state. Cloud sync (Phase 3) will upload the
 // same SaveGame objects, so this format is the contract for both.
 
+import type { LeagueSeasonRecord } from '../game/awards';
 import type { OffseasonState } from '../game/offseason';
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import { Rng, newSeason, newSeed, validateLeague, teamName, type LeagueFile, type SeasonState } from '../engine';
@@ -22,6 +23,8 @@ export interface CareerSettings {
   difficulty: Difficulty;
   /** With "Watch": how to follow games in 2D. */
   watchMode?: 'full' | 'key' | 'crunch';
+  /** The owner's grade for each finished season. */
+  reviews?: { season: number; grade: string; wins: number; losses: number; expectation: string }[];
 }
 
 export interface InboxMessage {
@@ -52,6 +55,8 @@ export interface SaveGame {
   offseason?: OffseasonState;
   /** Your team's past seasons, oldest first. */
   history?: { season: number; wins: number; losses: number; champion: string | null }[];
+  /** Every finished season in this save: champion and awards. */
+  leagueHistory?: LeagueSeasonRecord[];
 }
 
 export interface SaveSummary {

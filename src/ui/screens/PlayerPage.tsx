@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { negotiation } from '../../game/contracts';
 import { convertTwoWay, signTwoWay, twoWayEligible, waiveCost, waivePlayer, type MoveResult } from '../../game/roster';
 import { morale, MORALE_LABEL } from '../../game/morale';
+import { playerHonors } from '../../game/awards';
 import { useCareer } from '../career-context';
 import { ContractOffer } from './ContractOffer';
 import { FitReportCard } from './Scouting';
@@ -93,6 +94,7 @@ export function PlayerPage({ playerId }: { playerId: string }) {
         </div>
       </section>
 
+      <HonorBadges playerId={p.id} />
       {save.season.injuries?.[p.id] && (
         <div className="notice injury-notice">
           <strong>Injured: {save.season.injuries[p.id]!.type}.</strong>{' '}
@@ -302,5 +304,23 @@ function SeasonStats({ playerId }: { playerId: string }) {
         </table>
       </div>
     </Card>
+  );
+}
+
+/** Awards and All-Star selections won in this save, grouped by label. */
+function HonorBadges({ playerId }: { playerId: string }) {
+  const { save } = useCareer();
+  const honors = playerHonors(save, playerId);
+  if (!honors.length) return null;
+  const groups = new Map<string, number[]>();
+  for (const h of honors) groups.set(h.label, [...(groups.get(h.label) ?? []), h.season]);
+  return (
+    <ul className="honors" aria-label="Honors">
+      {[...groups.entries()].map(([label, years]) => (
+        <li key={label} className={`honor ${/MVP/.test(label) ? 'gold' : ''}`} title={years.map((y) => seasonLabel(y)).join(', ')}>
+          {years.length > 1 && <b>{years.length}×</b>} {label}
+        </li>
+      ))}
+    </ul>
   );
 }

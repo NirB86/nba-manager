@@ -60,6 +60,31 @@ export interface SeasonState {
   rumors?: string[];
   /** Current injuries by player id. */
   injuries?: Record<string, Injury>;
+  /** Season awards, set when the regular season ends (Finals MVP after the Finals). */
+  awards?: SeasonAwards;
+  /** The All-Star Game, played just past the middle of the regular season. */
+  allStar?: AllStarGame;
+}
+
+export interface SeasonAwards {
+  mvp: string | null;
+  roy: string | null;
+  sixth: string | null;
+  dpoy: string | null;
+  /** First, second and third team, five player ids each. */
+  allNba: string[][];
+  finalsMvp?: string | null;
+  /** Top five in MVP voting with their scores. */
+  mvpVoting?: { playerId: string; score: number }[];
+}
+
+export interface AllStarGame {
+  day: number;
+  /** Conference id to the twelve player ids picked. */
+  rosters: Record<string, string[]>;
+  score: Record<string, number>;
+  winner: string;
+  mvp: string;
 }
 
 export interface Highlight {
