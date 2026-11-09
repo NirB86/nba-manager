@@ -6,12 +6,13 @@ import { money } from '../format';
 import { href } from '../router';
 import { PageHeader } from '../Shell';
 import { RosterTable } from './Roster';
+import { HistoryView } from './History';
 import { LeadersView, PlayoffsView, StandingsView } from './Season';
 
 export function League() {
   const { save } = useCareer();
   const { league } = save;
-  const [view, setView] = useState<'standings' | 'playoffs' | 'leaders' | 'teams' | 'fa'>(save.season.phase === 'regular' ? 'standings' : 'playoffs');
+  const [view, setView] = useState<'standings' | 'playoffs' | 'leaders' | 'teams' | 'fa' | 'history'>(save.season.phase === 'regular' ? 'standings' : 'playoffs');
   const ranked = teamSummaries(league).sort((a, b) => b.rating - a.rating);
   const rank = new Map(ranked.map((s, i) => [s.team.id, i + 1]));
   const freeAgents = league.players.filter((p) => p.teamId === null);
@@ -30,6 +31,7 @@ export function League() {
             { value: 'leaders', label: 'Leaders' },
             { value: 'teams', label: 'Team ratings' },
             { value: 'fa', label: `Free agents (${freeAgents.length})` },
+            { value: 'history', label: 'History' },
           ]}
         />
       </div>
@@ -37,6 +39,7 @@ export function League() {
       {view === 'standings' && <StandingsView />}
       {view === 'playoffs' && <PlayoffsView />}
       {view === 'leaders' && <LeadersView />}
+      {view === 'history' && <HistoryView />}
       {view === 'teams' &&
         league.conferences.map((conf) => (
           <Card key={conf.id} title={conf.name}>

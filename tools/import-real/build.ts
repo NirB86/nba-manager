@@ -20,6 +20,7 @@ import {
   type Contract,
   type DraftPick,
   type LeagueFile,
+  type PastSeason,
   type Player,
   type Position,
   type Staff,
@@ -505,6 +506,38 @@ for (const rt of REAL_TEAMS) {
   }
 }
 
+// ---------------------------------------------------------------- past seasons
+
+const brefAbbrev = new Map<string, string>(REAL_TEAMS.map((t) => [t.bref, t.abbrev]));
+
+/** Completed seasons from the cache (per game), oldest first. Basketball-Reference years are end years. */
+function pastSeasonsOf(id: string): PastSeason[] {
+  const out: PastSeason[] = [];
+  for (const [bref, stats] of [[PREV - 1, olderStats], [PREV, prevStats]] as const) {
+    const r = stats.get(id)?.pg;
+    const g = num(r?.games);
+    if (!r || !g) continue;
+    const team = r.team_name_abbr?.text ?? '';
+    const one = (v: number | null) => Math.round((v ?? 0) * 10) / 10;
+    const pct = (v: number | null) => (v === null ? undefined : Math.round(v * 1000) / 1000);
+    out.push({
+      season: bref - 1,
+      team: /^\dTM$/.test(team) ? 'TOT' : (brefAbbrev.get(team) ?? team),
+      g,
+      gs: num(r.games_started) ?? undefined,
+      min: one(num(r.mp_per_g)),
+      pts: one(num(r.pts_per_g)),
+      reb: one(num(r.trb_per_g)),
+      ast: one(num(r.ast_per_g)),
+      stl: one(num(r.stl_per_g)),
+      blk: one(num(r.blk_per_g)),
+      fgPct: pct(num(r.fg_pct)),
+      tpPct: pct(num(r.fg3_pct)),
+    });
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------- assemble
 
 const rng = new Rng(END_YEAR * 7919);
@@ -551,6 +584,7 @@ for (const b of people) {
     draft,
     experience: b.experience,
     ...(b.college ? { college: b.college } : {}),
+    ...(pastSeasonsOf(b.id).length ? { pastSeasons: pastSeasonsOf(b.id) } : {}),
   });
 }
 

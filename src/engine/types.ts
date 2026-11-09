@@ -4,7 +4,7 @@
 // See docs/league-format.md for the human-readable spec.
 
 export const LEAGUE_FORMAT = 'nbam-league';
-export const LEAGUE_FORMAT_VERSION = 7;
+export const LEAGUE_FORMAT_VERSION = 8;
 
 export type Id = string;
 export type Position = 'PG' | 'SG' | 'SF' | 'PF' | 'C';
@@ -174,6 +174,29 @@ export interface Player {
   photo?: ImageCredit;
   /** Optional (format v5): college(s) attended, e.g. "Duke". */
   college?: string;
+  /** Optional (format v8): past regular seasons, oldest first (imported, then added each summer). */
+  pastSeasons?: PastSeason[];
+}
+
+/** One regular season of a player's career: per-game averages. */
+export interface PastSeason {
+  /** League year the season started in. */
+  season: number;
+  /** Team abbreviation(s), e.g. "BOS" or "TOT" when traded. */
+  team: string;
+  g: number;
+  gs?: number;
+  min: number;
+  pts: number;
+  reb: number;
+  ast: number;
+  stl?: number;
+  blk?: number;
+  /** Field-goal and three-point percentages, 0-1. */
+  fgPct?: number;
+  tpPct?: number;
+  /** On-screen overall at the end of the season (in-game seasons only). */
+  ovr?: number;
 }
 
 export type StaffRole = 'HC' | 'AC' | 'SCOUT' | 'MED' | 'DEV';

@@ -4,6 +4,7 @@
 import { Rng, fullName, newSeed, playerOverall, simulateDay, standings, teamName, type DayReport, type GameResult, type PlayEvent, type ScheduledGame, type SeasonState } from '../engine';
 import type { InboxMessage, SaveGame } from '../storage/saves';
 import { weeklyMarket } from './market';
+import { RECORD_LABEL, RECORD_NEWS, updateRecords } from './history';
 import { announceAwards, computeFinalsMvp, maybeAllStar, seasonReview } from './awards';
 
 export type AdvanceTarget = 'next-game' | 'week' | 'regular-end' | 'season-end';
@@ -50,6 +51,13 @@ function message(save: SaveGame, id: string, from: string, subject: string, body
 function afterDay(save: SaveGame, report: DayReport, rng: Rng, before: { phase: SeasonState['phase']; series: number; day: number }) {
   const { season } = save;
   injuryNews(save, report);
+  for (const { stat, rec } of updateRecords(save, report)) {
+    if (rec.value < RECORD_NEWS[stat]) continue;
+    const opp = save.league.teams.find((t) => t.id === rec.oppId);
+    save.season.rumors = [`RECORD: ${rec.name} ${rec.value} ${RECORD_LABEL[stat].toLowerCase()} vs ${opp?.abbrev ?? ''}`, ...(save.season.rumors ?? [])].slice(0, 6);
+    if (save.league.players.find((p) => p.id === rec.playerId)?.teamId === save.career.teamId)
+      save.inbox.unshift(message(save, `record-${stat}-${season.day}`, 'Head coach', `Record night: ${rec.value} ${RECORD_LABEL[stat].toLowerCase()}`, `${rec.name} set a new single-game record in this league with ${rec.value} ${RECORD_LABEL[stat].toLowerCase()} against the ${opp?.name ?? 'opponent'}.`));
+  }
   // Once a game week: offers, AI trades and rumors.
   if (season.phase === 'regular' && season.day !== before.day && season.day % 7 === 0) weeklyMarket(save, rng);
   if (season.phase === 'regular' && season.day !== before.day) maybeAllStar(save, rng);

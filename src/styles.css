@@ -1049,3 +1049,19 @@ select.input { appearance: auto; }
 .shot-chart svg { width: 100%; max-width: 360px; justify-self: center; border: 1px solid var(--border); }
 .shot-chart .cast-seg button { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 @media (max-width: 480px) { .cast-top { gap: 6px; } .cast-btn { padding: 0 9px; font-size: 13px; } }
+
+/* League history */
+.hist-team { display: inline-flex; align-items: center; gap: 6px; }
+.records { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr)); gap: 10px; }
+.records li { display: flex; gap: 12px; align-items: center; padding: 8px 10px; background: var(--surface-2); border-left: 4px solid var(--team); }
+.rec-value { font-family: var(--display, inherit); font-size: 32px; font-weight: 900; font-style: italic; min-width: 48px; text-align: center; }
+.best-seasons { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px 20px; }
+.best-seasons h3 { font-size: 14px; margin: 0 0 6px; }
+.best-seasons ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+.hof { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.hof li { display: grid; grid-template-columns: 56px 1fr; gap: 12px; align-items: center; padding: 8px; border: 1px solid #c9962b; background: linear-gradient(135deg, #fffaf0, #fff); }
+.hof-face { width: 56px; height: 56px; border-radius: 50%; overflow: hidden; display: block; background: var(--surface-2); }
+.hof-face img { width: 100%; height: 100%; object-fit: cover; }
+.hof-honors { display: block; font-size: 12px; font-weight: 700; color: #8a6514; margin-top: 2px; }
+.career-table tr.current td { font-style: italic; }
+@media (max-width: 480px) { .records { grid-template-columns: 1fr 1fr; gap: 8px; } .records li { flex-direction: column; align-items: flex-start; gap: 2px; padding: 6px 8px; } .rec-value { font-size: 26px; text-align: left; min-width: 0; } }

@@ -5,6 +5,7 @@ import { negotiation } from '../../game/contracts';
 import { convertTwoWay, signTwoWay, twoWayEligible, waiveCost, waivePlayer, type MoveResult } from '../../game/roster';
 import { morale, MORALE_LABEL } from '../../game/morale';
 import { playerHonors } from '../../game/awards';
+import { careerTotals } from '../../game/history';
 import { useCareer } from '../career-context';
 import { ContractOffer } from './ContractOffer';
 import { FitReportCard } from './Scouting';
@@ -251,6 +252,7 @@ export function PlayerPage({ playerId }: { playerId: string }) {
       </div>
 
       <SeasonStats playerId={p.id} />
+      <CareerStats player={p} />
       <ImageCreditLine label="Photo" image={p.photo} />
     </>
   );
@@ -322,5 +324,74 @@ function HonorBadges({ playerId }: { playerId: string }) {
         </li>
       ))}
     </ul>
+  );
+}
+
+/** Every past regular season (imported and played in this save), plus the season in progress. */
+function CareerStats({ player }: { player: Player }) {
+  const { save } = useCareer();
+  const past = player.pastSeasons ?? [];
+  const cur = save.season.stats.regular[player.id];
+  const now = perGame(cur);
+  const team = save.league.teams.find((t) => t.id === player.teamId)?.abbrev ?? 'FA';
+  const live = cur?.g && !past.some((s) => s.season === save.season.year) ? [{ season: save.season.year, team, g: now.g, min: now.min, pts: now.pts, reb: now.reb, ast: now.ast, fgPct: now.fgPct, tpPct: now.tpPct, current: true }] : [];
+  const rows = [...past.map((s) => ({ ...s, current: false })), ...live];
+  if (rows.length < 1 || (rows.length === 1 && live.length)) return null;
+  const tot = careerTotals([...past, ...live]);
+  const avg = (v: number) => (tot.g ? f1(v / tot.g) : '—');
+  return (
+    <Card title="Career">
+      <div className="table-wrap">
+        <table className="table compact career-table">
+          <thead>
+            <tr>
+              <th>Season</th>
+              <th>Team</th>
+              <th className="num">GP</th>
+              <th className="num hide-sm">MIN</th>
+              <th className="num">PTS</th>
+              <th className="num">REB</th>
+              <th className="num">AST</th>
+              <th className="num hide-sm">FG%</th>
+              <th className="num hide-sm">3P%</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((s) => (
+              <tr key={s.season} className={s.current ? 'current' : ''}>
+                <td>
+                  {seasonLabel(s.season)}
+                  {s.current && <span className="muted small"> (now)</span>}
+                </td>
+                <td>{s.team}</td>
+                <td className="num">{s.g}</td>
+                <td className="num hide-sm">{f1(s.min)}</td>
+                <td className="num">
+                  <strong>{f1(s.pts)}</strong>
+                </td>
+                <td className="num">{f1(s.reb)}</td>
+                <td className="num">{f1(s.ast)}</td>
+                <td className="num hide-sm">{s.fgPct !== undefined ? pct(s.fgPct) : '—'}</td>
+                <td className="num hide-sm">{s.tpPct !== undefined ? pct(s.tpPct) : '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+          <tfoot>
+            <tr>
+              <th>Career</th>
+              <th>{tot.seasons} yrs</th>
+              <th className="num">{tot.g}</th>
+              <th className="num hide-sm" />
+              <th className="num">{avg(tot.pts)}</th>
+              <th className="num">{avg(tot.reb)}</th>
+              <th className="num">{avg(tot.ast)}</th>
+              <th className="num hide-sm" />
+              <th className="num hide-sm" />
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      <p className="muted small">Career totals: {tot.pts.toLocaleString()} points, {tot.reb.toLocaleString()} rebounds, {tot.ast.toLocaleString()} assists{player.experience + 1 > tot.seasons ? ` (seasons before ${seasonLabel(rows[0]!.season)} are not in this league file)` : ''}.</p>
+    </Card>
   );
 }

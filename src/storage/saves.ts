@@ -3,6 +3,7 @@
 // same SaveGame objects, so this format is the contract for both.
 
 import type { LeagueSeasonRecord } from '../game/awards';
+import type { HallOfFamer, Records } from '../game/history';
 import type { OffseasonState } from '../game/offseason';
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import { Rng, newSeason, newSeed, validateLeague, teamName, type LeagueFile, type SeasonState } from '../engine';
@@ -57,6 +58,10 @@ export interface SaveGame {
   history?: { season: number; wins: number; losses: number; champion: string | null }[];
   /** Every finished season in this save: champion and awards. */
   leagueHistory?: LeagueSeasonRecord[];
+  /** Single-game records set in this save. */
+  records?: Records;
+  /** Retired greats, in order of induction. */
+  hallOfFame?: HallOfFamer[];
 }
 
 export interface SaveSummary {

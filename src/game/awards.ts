@@ -26,6 +26,8 @@ export interface LeagueSeasonRecord {
   awards?: SeasonAwards;
   allStarMvp?: string | null;
   allStars?: string[];
+  /** Best regular-season record. */
+  best?: { teamId: string; w: number; l: number };
 }
 
 const push = (save: SaveGame, m: InboxMessage) => {
@@ -257,7 +259,8 @@ export function seasonReview(save: SaveGame) {
   else season.awards = { ...computeAwards(save), finalsMvp: computeFinalsMvp(save) };
   const finals = season.series.find((s) => s.round === 4);
   const runnerUp = finals?.winner ? (finals.top.teamId === finals.winner ? finals.bottom.teamId : finals.top.teamId) : null;
-  const record: LeagueSeasonRecord = { season: league.meta.season, champion: season.champion, runnerUp, awards: season.awards, allStarMvp: season.allStar?.mvp ?? null, allStars: season.allStar ? Object.values(season.allStar.rosters).flat() : [] };
+  const top = standings(league, season.games).sort((a, b) => b.w - a.w)[0];
+  const record: LeagueSeasonRecord = { best: top ? { teamId: top.teamId, w: top.w, l: top.l } : undefined, season: league.meta.season, champion: season.champion, runnerUp, awards: season.awards, allStarMvp: season.allStar?.mvp ?? null, allStars: season.allStar ? Object.values(season.allStar.rosters).flat() : [] };
   save.leagueHistory = [...(save.leagueHistory ?? []).filter((r) => r.season !== record.season), record];
 
   const row = standings(league, season.games).find((r) => r.teamId === me);

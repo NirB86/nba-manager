@@ -29,6 +29,7 @@ import {
 } from '../engine';
 import type { InboxMessage, SaveGame } from '../storage/saves';
 import { MLE_SHARE } from './contracts';
+import { induct, recordPlayerSeasons } from './history';
 
 export type OffseasonStage = 'draft' | 'free-agency' | 'camp';
 
@@ -66,6 +67,8 @@ export function startOffseason(original: SaveGame, rng = new Rng(newSeed())): Sa
   if (original.season.phase !== 'done' || original.offseason) return original;
   const save = structuredClone(original);
   const { league, season } = save;
+  // The season just played goes into every player's career record, with the team he finished on.
+  recordPlayerSeasons(league, season);
   const draftYear = league.meta.season + 1;
   const playoffTeams = new Set(season.series.filter((s) => s.round === 1).flatMap((s) => [s.top.teamId, s.bottom.teamId]));
   const order = draftOrder(league, season.games, playoffTeams, draftYear, rng);
@@ -260,6 +263,7 @@ export function startNewSeason(original: SaveGame, rng = new Rng(newSeed())): Sa
   const myBefore = new Map(rosterOf(league, me).map((p) => [p.id, displayRating(playerOverall(p))]));
   developPlayers(league, rng, devCoach);
   const retired = retirements(league, rng);
+  const inducted = induct(save, retired);
   const retiredIds = new Set(retired.map((p) => p.id));
   league.players = league.players.filter((p) => !retiredIds.has(p.id));
 
@@ -298,5 +302,10 @@ export function startNewSeason(original: SaveGame, rng = new Rng(newSeed())): Sa
   save.inbox.unshift(
     msg(save, 'camp', 'Head coach', 'Training camp report', `${up.length ? `Improved over the summer: ${up.join(', ')}. ` : ''}${down.length ? `Lost a step: ${down.join(', ')}. ` : ''}${myRetired.length ? `Retired: ${myRetired.join(', ')}. ` : ''}${cutMine.length ? `To get down to ${league.settings.rosterMax}, we waived ${cutMine.map(fullName).join(', ')}. ` : ''}${retired.length} players retired around the league.`.trim()),
   );
+  if (inducted.length) {
+    save.inbox.unshift(
+      msg(save, 'hof', 'League office', `Hall of Fame: ${inducted.map((h) => h.name).join(', ')}`, `Inducted after retiring this summer: ${inducted.map((h) => `${h.name} (${h.honors.slice(0, 3).join(', ') || `${h.totals.pts.toLocaleString()} points`})`).join('; ')}.`),
+    );
+  }
   return save;
 }

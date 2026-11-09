@@ -75,6 +75,16 @@ export function validateLeague(data: unknown): ValidationResult {
     if (p.teamId && !p.contract) warnings.push(`${label} is on a team without a contract.`);
     if (p.photo && !/^https:\/\//.test(p.photo.url ?? '')) err(`${label}: photo url must start with https://.`);
     if (p.college !== undefined && typeof p.college !== 'string') err(`${label}: college must be text.`);
+    if (p.pastSeasons !== undefined) {
+      if (!Array.isArray(p.pastSeasons)) err(`${label}: pastSeasons must be a list.`);
+      else
+        for (const s of p.pastSeasons) {
+          if (!s || typeof s.season !== 'number' || typeof s.team !== 'string' || ![s.g, s.min, s.pts, s.reb, s.ast].every((v) => typeof v === 'number' && Number.isFinite(v) && v >= 0)) {
+            err(`${label}: each past season needs season, team, g, min, pts, reb and ast.`);
+            break;
+          }
+        }
+    }
     if (p.teamId) rosterSize.set(p.teamId, (rosterSize.get(p.teamId) ?? 0) + 1);
   }
 

@@ -1,4 +1,4 @@
-# League file format (version 7)
+# League file format (version 8)
 
 A league file is one JSON document that holds everything a new career starts
 from. The game ships with a generator for fictional leagues; any other league
@@ -11,7 +11,7 @@ The TypeScript definition is `src/engine/types.ts` and `validateLeague()` in
 | Field | Type | Notes |
 | --- | --- | --- |
 | `format` | `"nbam-league"` | Required, fixed value |
-| `version` | number | `7` (versions 1 to 6 still load) |
+| `version` | number | `8` (versions 1 to 7 still load) |
 | `meta` | object | `name`, `season` (year the season starts: 2026 = 2026-27), `source` (`fictional`, `real`, `custom`), `createdAt`, optional `seed`, optional `logo` and `draftLogo` (images, same shape as a player photo; version 3) |
 | `deadMoney` | list | Optional (v7): salary still owed to waived players, `{ teamId, playerId, name, years: [{ season, salary }] }`; counts on that team's payroll |
 | `settings` | object | Cap figures and roster rules, below |
@@ -62,6 +62,7 @@ All money in US dollars.
 | `experience` | Seasons played before the current one |
 | `photo` | Optional (v2): `{ url, credit, license, source, sourceUrl, focus?, nonCommercial? }` for a free-licensed photo; `url` must be https. `focus` = `{ x, y, w, aspect }`: eye-line centre and face width as fractions of the image, and image height/width, used to frame headshots |
 | `college` | Optional (v5): college(s) attended as text, e.g. `"Duke"` or `"Kentucky, UCLA"` |
+| `pastSeasons` | Optional (v8): past regular seasons, oldest first. Each: `season` (start year), `team` (abbreviation, `"TOT"` if traded), `g`, `min`, `pts`, `reb`, `ast` per game; optional `gs`, `stl`, `blk`, `fgPct`, `tpPct` (0-1), `ovr` |
 
 The overall rating is not stored; the game computes it from attributes and position.
 
