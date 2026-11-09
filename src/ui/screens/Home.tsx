@@ -5,7 +5,7 @@ import { conferenceRank, leagueWire, ownerMood } from '../../game/news';
 import { morale, MORALE_LABEL, type MoraleLevel } from '../../game/morale';
 import type { SaveGame } from '../../storage/saves';
 import { useCareer } from '../career-context';
-import { Card, MoodPill, Pill, PlayerPhoto, TeamBadge, LeagueLogo } from '../components';
+import { photoSrc, Card, MoodPill, Pill, PlayerPhoto, TeamBadge, LeagueLogo } from '../components';
 import { money } from '../format';
 import { href } from '../router';
 import { PageHeader } from '../Shell';
@@ -343,7 +343,7 @@ export function Home({ messageId }: { messageId?: string }) {
               <span className="lc-num" aria-hidden="true">{p.jersey}</span>
               {team.logo && <img className="lc-logo" src={team.logo.url} alt="" />}
               {isCutout(p.photo) ? (
-                <img className="lc-cutout" src={p.photo!.url} alt="" loading="lazy" />
+                <img className="lc-cutout" src={photoSrc(p.photo!.url, 'md')} alt="" loading="lazy" decoding="async" />
               ) : (
                 <span className="lc-face">
                   <PlayerPhoto photo={p.photo} number={p.jersey} colors={team.colors} />

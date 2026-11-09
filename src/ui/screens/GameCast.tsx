@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { LiveGame, Rng, newSeed, type GameResult, type LiveState, type PlayEvent, type Player, type Tactics, type Team } from '../../engine';
 import type { SaveGame } from '../../storage/saves';
-import { TeamBadge } from '../components';
+import { photoSrc, TeamBadge } from '../components';
 
 export type WatchMode = 'full' | 'key' | 'crunch';
 
@@ -440,7 +440,7 @@ export function GameCast({ save, homeId, awayId, mode, onFinish }: { save: SaveG
                 <g key={id} className="cast-token" style={{ transform: `translate(${spot.x}px, ${spot.y}px)`, transitionDuration: `${(STEP_MS * 0.85) / speed}ms` }}>
                   {f?.holder === id && <circle r={r + 7} fill="none" stroke="#f07a1a" strokeWidth="4" />}
                   <circle r={r} fill="#dfe3e8" />
-                  {p?.photo ? <image href={p.photo.url} x={-r} y={-r} width={r * 2} height={r * 2} preserveAspectRatio="xMidYMin slice" clipPath="url(#cast-round)" /> : null}
+                  {p?.photo ? <image href={photoSrc(p.photo.url, 'sm')} x={-r} y={-r} width={r * 2} height={r * 2} preserveAspectRatio="xMidYMin slice" clipPath="url(#cast-round)" /> : null}
                   <circle r={r - 1.5} fill="none" stroke={color} strokeWidth="4" />
                   <circle cx={r - 4} cy={r - 4} r="10" fill={color} stroke="#fff" strokeWidth="2" />
                   <text x={r - 4} y={r} textAnchor="middle" className="cast-num">

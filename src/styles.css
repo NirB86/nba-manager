@@ -987,3 +987,6 @@ select.input { appearance: auto; }
 .spotify-dock iframe { display: block; border: 0; border-radius: 12px; }
 .spotify-close { position: absolute; top: -10px; right: -10px; width: 28px; height: 28px; border-radius: 50%; border: 2px solid #fff; background: var(--black); color: #fff; font-size: 16px; line-height: 1; cursor: pointer; }
 @media (max-width: 899px) { .spotify-dock { bottom: calc(var(--tabbar-h, 64px) + 10px + env(safe-area-inset-bottom)); } }
+.hero-wall img { opacity: 0; transition: opacity 0.5s ease; }
+.hero-wall img.in { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .hero-wall img { transition: none; } }

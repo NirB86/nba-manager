@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { deleteSave, exportSave, importSaveFile, listSaves, loadSave, type SaveSummary } from '../../storage/saves';
 import { playerOverall, type LeagueFile } from '../../engine';
-import { TeamBadge } from '../components';
+import { photoSrc, TeamBadge } from '../components';
 import { MusicButton } from '../MusicControls';
 import { ChampionshipTrophy } from '../Trophy';
 import { cloudConfigured } from '../../cloud/cloud';
@@ -151,16 +151,34 @@ export function MainMenu() {
 
 /** A dimmed wall of the league's players behind the hero, and the trophy in front. */
 function HeroWall({ league }: { league: LeagueFile }) {
+  // Only as many faces as fill the banner (tiles are about 92 x 104 px), in the small 260 px size.
+  const [count] = useState(() => {
+    if (typeof window === 'undefined') return 40;
+    const cols = Math.ceil(window.innerWidth / (window.innerWidth <= 600 ? 70 : 92)) + 1;
+    const rows = Math.ceil(Math.min(window.innerHeight * 0.8, 720) / (window.innerWidth <= 600 ? 80 : 104)) + 1;
+    return Math.min(120, cols * rows);
+  });
   const faces = league.players
     .filter((p) => p.teamId && p.photo?.source === 'NBA.com')
     .sort((a, b) => playerOverall(b) - playerOverall(a))
-    .slice(0, 220);
+    .slice(0, count);
   if (!faces.length) return null;
   return (
     <>
       <div className="hero-wall" aria-hidden="true">
-        {faces.map((p) => (
-          <img key={p.id} src={p.photo!.url} alt="" loading="lazy" />
+        {faces.map((p, i) => (
+          <img
+            key={p.id}
+            src={photoSrc(p.photo!.url, 'sm')}
+            alt=""
+            decoding="async"
+            fetchPriority={i < 24 ? 'high' : 'low'}
+            // Fade each face in as it arrives instead of popping in.
+            ref={(el) => {
+              if (el?.complete) el.classList.add('in');
+            }}
+            onLoad={(e) => e.currentTarget.classList.add('in')}
+          />
         ))}
       </div>
       <ChampionshipTrophy className="hero-trophy" />

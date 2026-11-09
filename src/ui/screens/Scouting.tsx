@@ -3,7 +3,7 @@ import { displayRating, fullName, playerAge, playerOverall, salaryIn, type Playe
 import { fitReport, type FitReport } from '../../game/fit';
 import { potentialRange } from '../../game/scouting';
 import { useCareer } from '../career-context';
-import { Card, Ovr, PlayerPhoto, Segmented } from '../components';
+import { photoSrc, Card, Ovr, PlayerPhoto, Segmented } from '../components';
 import { money } from '../format';
 import { href } from '../router';
 import { PageHeader } from '../Shell';
@@ -71,7 +71,7 @@ export function Scouting() {
               <a key={p.id} className="scout-pick" href={href('c', save.id, 'player', p.id)} style={{ ['--team' as string]: t?.colors.primary ?? '#3b4150', ['--team2' as string]: t?.colors.secondary ?? '#c7cbd2' }}>
                 <span className="scout-pick-art">
                   {t?.logo && <img className="lc-logo" src={t.logo.url} alt="" />}
-                  {p.photo?.source === 'NBA.com' ? <img className="lc-cutout" src={p.photo.url} alt="" loading="lazy" /> : <span className="lc-face"><PlayerPhoto photo={p.photo} number={p.jersey} colors={t?.colors ?? { primary: '#3b4150', secondary: '#c7cbd2' }} /></span>}
+                  {p.photo?.source === 'NBA.com' ? <img className="lc-cutout" src={photoSrc(p.photo.url, 'md')} alt="" loading="lazy" decoding="async" /> : <span className="lc-face"><PlayerPhoto photo={p.photo} number={p.jersey} colors={t?.colors ?? { primary: '#3b4150', secondary: '#c7cbd2' }} /></span>}
                   <FitBadge fit={fit} />
                 </span>
                 <span className="scout-pick-body">

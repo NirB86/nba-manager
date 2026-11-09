@@ -73,6 +73,16 @@ export function faceFraming(focus: NonNullable<ImageCredit['focus']>, zoom: numb
   return { backgroundSize: `${100 / cropW}% auto`, backgroundPosition: `${px.toFixed(1)}% ${py.toFixed(1)}%` };
 }
 
+/**
+ * The right size of a headshot for where it is shown. Official NBA.com
+ * headshots come in 1040x760 (about 170 KB), 520x380 (50 KB) and 260x190
+ * (15 KB); other photos are returned as they are.
+ */
+export function photoSrc(url: string, size: 'sm' | 'md' | 'lg'): string {
+  if (size === 'lg' || !url.includes('cdn.nba.com/headshots/')) return url;
+  return url.replace(/\/\d+x\d+\//, size === 'sm' ? '/260x190/' : '/520x380/');
+}
+
 /** A player's free-licensed photo, or the jersey figure when there is none. */
 export function PlayerPhoto({
   photo,
@@ -81,6 +91,7 @@ export function PlayerPhoto({
   className,
   frame = 'headshot',
   boxAspect = 1,
+  size,
 }: {
   photo?: ImageCredit;
   number: number | string;
@@ -89,18 +100,21 @@ export function PlayerPhoto({
   /** headshot: tight on the face; portrait: head and shoulders for big banners. */
   frame?: 'headshot' | 'portrait';
   boxAspect?: number;
+  /** Image size to load: small faces by default, the full photo for big portraits. */
+  size?: 'sm' | 'md' | 'lg';
 }) {
   const [broken, setBroken] = useState(false);
   if (photo && !broken) {
+    const src = photoSrc(photo.url, size ?? (frame === 'portrait' ? 'lg' : 'sm'));
     if (photo.focus) {
       const framing = frame === 'headshot' ? faceFraming(photo.focus, 2.6, 0.42, boxAspect) : faceFraming(photo.focus, 4.2, 0.3, boxAspect);
       return (
-        <span className={`photo photo-framed ${className ?? ''}`} style={{ backgroundImage: `url("${photo.url}")`, ...framing }}>
-          <img src={photo.url} alt="" loading="lazy" onError={() => setBroken(true)} hidden />
+        <span className={`photo photo-framed ${className ?? ''}`} style={{ backgroundImage: `url("${src}")`, ...framing }}>
+          <img src={src} alt="" loading="lazy" decoding="async" onError={() => setBroken(true)} hidden />
         </span>
       );
     }
-    return <img className={`photo ${className ?? ''}`} src={photo.url} alt="" loading="lazy" onError={() => setBroken(true)} />;
+    return <img className={`photo ${className ?? ''}`} src={src} alt="" loading="lazy" decoding="async" onError={() => setBroken(true)} />;
   }
   return (
     <span className={`photo photo-figure ${className ?? ''}`}>
