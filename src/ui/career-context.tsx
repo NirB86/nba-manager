@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useMemo, useRef, useState, type ReactNode } from 'react';
 import { putSave, type SaveGame } from '../storage/saves';
+import { schedulePush } from '../cloud/saves-cloud';
 
 interface CareerCtx {
   save: SaveGame;
@@ -17,7 +18,8 @@ export function CareerProvider({ initial, children }: { initial: SaveGame; child
     const next = fn(latest.current);
     latest.current = next;
     setSave(next);
-    void putSave(next);
+    // Saved on the device, then copied to the cloud a few seconds after the last change.
+    void putSave(next).then(schedulePush);
   }, []);
 
   const value = useMemo(() => ({ save, update }), [save, update]);

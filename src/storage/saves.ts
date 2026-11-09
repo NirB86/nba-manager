@@ -141,6 +141,13 @@ export async function putSave(save: SaveGame): Promise<SaveGame> {
   return stamped;
 }
 
+/** Store a save exactly as it is (keeps its timestamp): used for copies coming from the cloud. */
+export async function storeSave(save: SaveGame): Promise<void> {
+  const database = await db();
+  const tx = database.transaction(['saves', 'summaries'], 'readwrite');
+  await Promise.all([tx.objectStore('saves').put(save), tx.objectStore('summaries').put(summarize(save)), tx.done]);
+}
+
 export async function deleteSave(id: string): Promise<void> {
   const database = await db();
   const tx = database.transaction(['saves', 'summaries'], 'readwrite');

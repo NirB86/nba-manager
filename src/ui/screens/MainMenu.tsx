@@ -6,6 +6,7 @@ import { MusicButton } from '../MusicControls';
 import { ChampionshipTrophy } from '../Trophy';
 import { cloudConfigured } from '../../cloud/cloud';
 import { cachedLeague, syncLeague, type SyncResult } from '../../cloud/sync';
+import { SETUP_SQL, cloudStatus, deleteCloudSave, onCloudStatus, syncSaves, type CloudStatus } from '../../cloud/saves-cloud';
 import type { CachedLeague } from '../../cloud/cloud';
 import { seasonLabel, timeAgo } from '../format';
 import { href, navigate } from '../router';
@@ -29,6 +30,8 @@ export function MainMenu() {
   useEffect(() => {
     void refresh();
     void cachedLeague().then(setLeague);
+    // Careers from your other devices come down, newer ones from here go up.
+    void syncSaves().then(() => refresh());
     void syncLeague().then((r) => {
       setSync(r);
       if (r.status === 'updated' || r.status === 'current') setLeague(r.league);
@@ -54,6 +57,7 @@ export function MainMenu() {
   const onDelete = async (s: SaveSummary) => {
     if (!window.confirm(`Delete "${s.name}"? This cannot be undone. Export it first if you want a backup.`)) return;
     await deleteSave(s.id);
+    void deleteCloudSave(s.id);
     void refresh();
   };
 
@@ -141,7 +145,7 @@ export function MainMenu() {
             );
           })}
         </ul>
-        <p className="muted small">Saves live on this device. Export a save to back it up or move it to another device. Cloud sync is coming.</p>
+        <CloudLine onSynced={refresh} />
       </section>
       </div>
       <footer className="menu-footer muted small">© 2026 NirB86 · v{__APP_VERSION__} · Your careers are saved on this device</footer>
@@ -202,6 +206,53 @@ function LogoStrip({ league }: { league: LeagueFile }) {
         </div>
       </div>
     </>
+  );
+}
+
+/** Cloud saves status under your careers, with the one-time setup when needed. */
+function CloudLine({ onSynced }: { onSynced: () => void }) {
+  const [status, setStatus] = useState<CloudStatus>(cloudStatus());
+  const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState(false);
+  useEffect(() => onCloudStatus(setStatus), []);
+  const sync = async () => {
+    setBusy(true);
+    await syncSaves();
+    onSynced();
+    setBusy(false);
+  };
+  if (status.state === 'needs-setup') {
+    return (
+      <div className="cloud-setup">
+        <strong>Cloud saves need a one-time setup (about a minute)</strong>
+        <ol>
+          <li>Open your Supabase project, then <em>SQL Editor</em> › <em>New query</em>.</li>
+          <li>Paste the text below and press <em>Run</em>. It lets each signed-in player reach only their own saves.</li>
+          <li>Come back and tap <em>Sync now</em>.</li>
+        </ol>
+        <pre className="cloud-sql">{SETUP_SQL}</pre>
+        <div className="music-row">
+          <button className="btn btn-sm" type="button" onClick={() => void navigator.clipboard?.writeText(SETUP_SQL).then(() => setCopied(true))}>
+            {copied ? 'Copied' : 'Copy the text'}
+          </button>
+          <button className="btn btn-sm btn-primary" type="button" disabled={busy} onClick={() => void sync()}>
+            Sync now
+          </button>
+        </div>
+      </div>
+    );
+  }
+  return (
+    <p className="muted small cloud-line">
+      {status.state === 'off' && <>{status.reason} Until then saves live on this device; export one to back it up.</>}
+      {status.state === 'synced' && <>☁ Cloud saves on: your careers are the same on every device you sign in on. Last synced {new Date(status.at).toLocaleTimeString()}.</>}
+      {status.state === 'error' && <>Cloud sync failed ({status.message}). Your careers are safe on this device.</>}{' '}
+      {status.state !== 'off' && (
+        <button className="btn btn-ghost btn-sm" type="button" disabled={busy} onClick={() => void sync()}>
+          {busy ? 'Syncing…' : 'Sync now'}
+        </button>
+      )}
+    </p>
   );
 }
 
