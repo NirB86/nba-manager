@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Rng, availablePlayers, rosterOf } from '../engine';
+import { Rng, availablePlayers, rosterOf, simulateDay } from '../engine';
 import { generateLeague } from '../engine/generator';
 import { advance } from './advance';
 import { createCareer } from './career';
@@ -44,13 +44,20 @@ describe('player demands', () => {
     expect(after.demands!.mods.some((m) => m.playerId === p.id && m.effect > 0)).toBe(true);
   }, 30000);
 
-  it('holdouts sit out until the count runs down', async () => {
-    let save = career(52);
+  it('holdouts sit out until the count runs down', () => {
+    const save = career(52);
     const me = save.career.teamId;
     const p = rosterOf(save.league, me)[0]!;
     save.season.holdouts = { [p.id]: 2 };
     expect(availablePlayers(save.league, save.season, me).some((x) => x.id === p.id)).toBe(false);
-    save = await advance(save, 'week');
+    // Play day by day until his team has played twice.
+    const rng = new Rng(9);
+    let played = 0;
+    for (let d = 0; d < 20 && played < 2; d++) {
+      const r = simulateDay(save.league, save.season, rng, () => false);
+      played += r.played.filter(({ game }) => game.home === me || game.away === me).length;
+    }
+    expect(played).toBe(2);
     expect(save.season.holdouts?.[p.id]).toBeUndefined();
   }, 30000);
 });
