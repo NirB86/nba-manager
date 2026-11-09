@@ -7,6 +7,7 @@ import { attrTone, money, seasonLabel } from '../format';
 import { href } from '../router';
 import { Icon, PageHeader } from '../Shell';
 import { MusicSettings } from '../MusicControls';
+import { enableNotify, notifySupported, notifyWanted } from '../notify';
 
 const ROLE_LABEL: Record<StaffRole, string> = {
   HC: 'Head coach',
@@ -78,6 +79,7 @@ export function Settings() {
     <>
       <PageHeader title="Settings" subtitle={save.name} />
       <MusicSettings />
+      <NotifySettings />
       <Card title="Career">
         <label className="field">
           <span>Career name</span>
@@ -124,6 +126,7 @@ export function More() {
     { key: 'scouting', label: 'Scouting', icon: 'scout' as const },
     { key: 'offseason', label: 'Offseason', icon: 'calendar' as const },
     { key: 'schedule', label: 'Schedule', icon: 'calendar' as const },
+    { key: 'achievements', label: 'Achievements', icon: 'league' as const },
     { key: 'staff', label: 'Staff', icon: 'staff' as const },
     { key: 'settings', label: 'Settings', icon: 'settings' as const },
     { key: 'credits', label: 'Photo credits', icon: 'staff' as const },
@@ -437,5 +440,28 @@ export function Credits() {
         </table>
       </div>
     </>
+  );
+}
+
+/** System notifications when a long sim finishes in the background; the app badge needs nothing. */
+function NotifySettings() {
+  const [on, setOn] = useState(notifyWanted);
+  const [msg, setMsg] = useState<string | null>(null);
+  if (!notifySupported()) return null;
+  const toggle = async () => {
+    const next = await enableNotify(!on);
+    setOn(next);
+    setMsg(!on && !next ? 'Notifications are blocked for this site in your browser settings.' : null);
+  };
+  return (
+    <Card title="Notifications">
+      <div className="notify-row">
+        <button type="button" className={`btn ${on ? 'btn-primary' : ''}`} onClick={() => void toggle()}>
+          {on ? 'Notifications on' : 'Turn on notifications'}
+        </button>
+        <span className="muted small">Tells you when a long sim finishes while the app is in the background. Unread inbox messages show on the app icon when the game is installed.</span>
+      </div>
+      {msg && <p className="small">{msg}</p>}
+    </Card>
   );
 }

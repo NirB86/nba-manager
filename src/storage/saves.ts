@@ -8,6 +8,7 @@ import type { FinanceState, JobOffer } from '../game/finance';
 import type { Demands } from '../game/demands';
 import type { PressConference } from '../game/press';
 import type { DraftScouting } from '../game/draft-scouting';
+import type { Unlocked } from '../game/achievements';
 import type { OffseasonState } from '../game/offseason';
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import { Rng, newSeason, newSeed, validateLeague, teamName, type LeagueFile, type SeasonState } from '../engine';
@@ -33,7 +34,7 @@ export interface CareerSettings {
   /** Fired by the owner: pick a new job from the offers. */
   fired?: boolean;
   /** Teams you ran before, and the league year you left. */
-  jobs?: { teamId: string; until: number }[];
+  jobs?: { teamId: string; until: number; fired?: boolean }[];
 }
 
 export interface InboxMessage {
@@ -80,6 +81,8 @@ export interface SaveGame {
   press?: PressConference | null;
   /** Draft scouting: where your scouts are looking, and what they know about each prospect. */
   draftScouting?: DraftScouting;
+  /** Achievements unlocked in this career, oldest first. */
+  achievements?: Unlocked[];
 }
 
 export interface SaveSummary {

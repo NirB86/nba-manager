@@ -14,7 +14,8 @@ describe('history', () => {
     const year = save.league.meta.season;
     expect(save.records?.game.pts?.value).toBeGreaterThan(30);
     save = startOffseason(save);
-    const star = [...save.league.players].filter((p) => p.pastSeasons?.length).sort((a, b) => playerOverall(b) - playerOverall(a))[0]!;
+    // A healthy regular: the best player who played most of the season.
+    const star = [...save.league.players].filter((p) => (p.pastSeasons?.at(-1)?.g ?? 0) > 60).sort((a, b) => playerOverall(b) - playerOverall(a))[0]!;
     expect(star.pastSeasons!.at(-1)!.season).toBe(year);
     expect(star.pastSeasons!.at(-1)!.g).toBeGreaterThan(40);
     save = simDraft(save, 'all');

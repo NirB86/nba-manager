@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
+import { achievementById, markAchievementsSeen } from '../game/achievements';
 import { teamName } from '../engine';
 import { useCareer, useOptionalCareer } from './career-context';
 import { TeamBadge } from './components';
@@ -52,6 +53,31 @@ const NAV: NavItem[] = [
   { key: 'staff', label: 'Staff', icon: 'staff', mobile: false },
   { key: 'settings', label: 'Settings', icon: 'settings', mobile: false },
 ];
+
+/** "Achievement unlocked" toast for anything not seen yet. */
+function AchievementToast() {
+  const { save, update } = useCareer();
+  const fresh = (save.achievements ?? []).filter((a) => !a.seen);
+  const first = fresh[0] ? achievementById.get(fresh[0].id) : undefined;
+  useEffect(() => {
+    if (!first) return;
+    const t = setTimeout(() => update(markAchievementsSeen), 6000);
+    return () => clearTimeout(t);
+  }, [first?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!first) return null;
+  return (
+    <a className="ach-toast" role="status" href={href('c', save.id, 'achievements')} onClick={() => update(markAchievementsSeen)}>
+      <span className="ach-icon" aria-hidden>
+        {first.icon}
+      </span>
+      <span>
+        <small>Achievement unlocked{fresh.length > 1 ? ` (+${fresh.length - 1} more)` : ''}</small>
+        <strong>{first.title}</strong>
+        <span className="small">{first.text}</span>
+      </span>
+    </a>
+  );
+}
 
 export function Shell({ section, children }: { section: string; children: ReactNode }) {
   const { save } = useCareer();
@@ -107,6 +133,7 @@ export function Shell({ section, children }: { section: string; children: ReactN
         )}
         <main className="content">{children}</main>
       </div>
+      <AchievementToast />
 
       <nav className="tabbar">
         {NAV.filter((n) => n.mobile).map((n) => (

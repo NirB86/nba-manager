@@ -1099,3 +1099,19 @@ select.input { appearance: auto; }
 .know-bar i { display: block; height: 100%; background: var(--good); }
 tr.focus-row td:first-child { box-shadow: inset 3px 0 0 var(--team); }
 @media (max-width: 480px) { .know-bar { width: 36px; } }
+
+/* Achievements */
+.ach-toast { position: fixed; z-index: 60; left: 50%; transform: translateX(-50%); bottom: calc(76px + env(safe-area-inset-bottom)); width: min(420px, calc(100vw - 32px)); display: grid; grid-template-columns: 44px 1fr; gap: 12px; align-items: center; padding: 10px 14px; background: var(--black); color: #fff; border-left: 5px solid #f2c14e; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35); text-decoration: none; animation: ach-in 0.4s ease-out; }
+.ach-toast small { display: block; color: #f2c14e; font-weight: 800; text-transform: uppercase; letter-spacing: 0.06em; font-size: 11px; }
+.ach-toast strong { display: block; font-size: 17px; }
+.ach-toast .small { color: #c9ccd3; }
+.ach-icon { font-size: 30px; text-align: center; }
+@keyframes ach-in { from { transform: translate(-50%, 20px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+@media (min-width: 900px) { .ach-toast { bottom: 24px; left: auto; right: 24px; transform: none; animation: none; } }
+.ach-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 10px; }
+.ach-grid li { display: grid; grid-template-columns: 40px 1fr; gap: 10px; align-items: center; padding: 10px; border: 1px solid var(--border); background: var(--surface); }
+.ach-grid li.locked { opacity: 0.5; filter: grayscale(1); }
+.ach-grid li.got { border-color: #c9962b; background: linear-gradient(135deg, #fffaf0, var(--surface)); }
+.ach-grid .ach-icon { font-size: 26px; }
+.ach-grid small { display: block; color: var(--text-3); }
+.notify-row { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }

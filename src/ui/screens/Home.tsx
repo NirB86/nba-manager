@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { CAP_STATUS_LABEL, capStatus, displayRating, rosterOf, playerOverall, teamPayroll, teamRating, type GameResult, type ImageCredit, type Player, type ScheduledGame } from '../../engine';
-import { advance, advanceToGameDay, finishLiveGame, lastUserGame, nextUserGame, type AdvanceTarget, type Progress } from '../../game/advance';
+import { dateLabel, advance, advanceToGameDay, finishLiveGame, lastUserGame, nextUserGame, type AdvanceTarget, type Progress } from '../../game/advance';
 import { allStarDay } from '../../game/awards';
 import { acceptJob, declineOffers, financeView } from '../../game/finance';
 import { answerPress } from '../../game/press';
+import { notify } from '../notify';
 import { ownerExpectation } from '../../game/career';
 import { conferenceRank, leagueWire, ownerMood } from '../../game/news';
 import { morale, MORALE_LABEL, type MoraleLevel } from '../../game/morale';
@@ -94,6 +95,10 @@ function MatchupBoard() {
     try {
       const result = await advance(save, target, setBusy);
       update(() => result);
+      if (target !== 'next-game') {
+        const fresh = result.inbox.filter((m) => !m.read && !save.inbox.some((x) => x.id === m.id));
+        notify('Simulation finished', fresh[0] ? `${fresh[0].subject}${fresh.length > 1 ? ` (+${fresh.length - 1} more)` : ''}` : dateLabel(result.season));
+      }
       // Show the game you just played (Play game), not the whole week.
       if (target === 'next-game') {
         const played = lastUserGame(result);

@@ -140,7 +140,7 @@ export function financeDay(save: SaveGame, report: DayReport, dayBefore: number)
   // Each week the owner's mood nudges their confidence in you.
   if (save.season.phase === 'regular' && save.season.day !== dayBefore && save.season.day % 7 === 0) {
     const mood = ownerMood(save).mood;
-    const d = mood === 'Thrilled' ? 1 : mood === 'Pleased' ? 0.5 : mood === 'Concerned' ? -1 : mood === 'Furious' ? -2 : 0;
+    const d = mood === 'Thrilled' ? 0.6 : mood === 'Pleased' ? 0.3 : mood === 'Concerned' ? -0.4 : mood === 'Furious' ? -0.8 : 0;
     f.confidence = clamp100(f.confidence + d);
   }
 }
@@ -175,9 +175,10 @@ export function ownerVerdict(save: SaveGame, grade: string) {
   let d = GRADE_DELTA[grade] ?? 0;
   d += p >= 0 ? 4 : -Math.min(14, (-p / 1e7) * 2.5);
   if (payroll > budget * 1.02) d -= 8;
-  // Owners give a new hire some rope in year one.
-  if (!f.confidenceHistory?.length) d = Math.max(d, -12);
+  // Owners give a new hire a full first season.
+  const firstYear = !f.confidenceHistory?.length;
   f.confidence = clamp100(f.confidence + d);
+  if (firstYear) f.confidence = Math.max(f.confidence, FIRE_AT[save.career.difficulty] + 12);
   f.confidenceHistory = [...(f.confidenceHistory ?? []).filter((c) => c.season !== year), { season: year, value: f.confidence }];
 
   const me = save.career.teamId;
@@ -217,7 +218,7 @@ export function acceptJob(original: SaveGame, teamId: string): SaveGame {
   const old = save.league.teams.find((t) => t.id === save.career.teamId);
   save.career.teamId = teamId;
   save.career.fired = false;
-  save.career.jobs = [...(save.career.jobs ?? []), { teamId: old?.id ?? '', until: save.league.meta.season }];
+  save.career.jobs = [...(save.career.jobs ?? []), { teamId: old?.id ?? '', until: save.league.meta.season, fired: !!original.career.fired }];
   save.jobOffers = [];
   save.finance = { ticketPrice: BASE_PRICE[team.market], ledger: emptyLedger(save.league.meta.season), history: [], confidence: 55 };
   save.inbox.unshift(msg(save, 'new-job', 'Owner', `Welcome to the ${team.name}`, `${ownerExpectation(save.league, teamId).goal}: that is what I expect. The draft and free agency are coming up.`));

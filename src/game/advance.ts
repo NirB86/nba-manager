@@ -4,6 +4,7 @@
 import { Rng, fullName, newSeed, playerOverall, simulateDay, standings, teamName, type DayReport, type GameResult, type PlayEvent, type ScheduledGame, type SeasonState } from '../engine';
 import type { InboxMessage, SaveGame } from '../storage/saves';
 import { weeklyMarket } from './market';
+import { checkAchievements } from './achievements';
 import { weeklyDemands } from './demands';
 import { weeklyScouting } from './draft-scouting';
 import { maybePress } from './press';
@@ -81,6 +82,7 @@ function afterDay(save: SaveGame, report: DayReport, rng: Rng, before: { phase: 
     news(save, before.phase, before.series);
     if (season.phase === 'done') ownerVerdict(save, seasonReview(save));
   }
+  checkAchievements(save, report);
 }
 
 /** Injury news: your players to the inbox, stars elsewhere to the league wire. */
