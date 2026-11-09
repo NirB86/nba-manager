@@ -435,6 +435,19 @@ export interface LiveState {
 
 const TIMEOUTS = 7;
 
+/** A decision made by a computer coach during a live game, for the broadcast. */
+export interface CoachMove {
+  side: 'home' | 'away';
+  kind: 'timeout' | 'zone' | 'man' | 'switch' | 'push' | 'slow' | 'foul-sub';
+  /** Points in the run that prompted a timeout. */
+  run?: number;
+  /** The player taken out, for foul trouble. */
+  playerId?: string;
+  fouls?: number;
+  q: number;
+  clock: number;
+}
+
 /**
  * A game played one possession at a time, so a coach can call timeouts,
  * make substitutions and change tactics between possessions. With the
@@ -453,6 +466,14 @@ export class LiveGame {
   private sinceSub = 0;
   private regulationElapsed = 0;
   done = false;
+  /** Sides run by a computer coach (live games only; never in simulateGame). */
+  private ai = new Set<'home' | 'away'>();
+  private moves: CoachMove[] = [];
+  /** Current unanswered run: which side and how many points. */
+  private run: { side: 'home' | 'away'; pts: number } = { side: 'home', pts: 0 };
+  /** Points allowed this period by shot type, per defending side. */
+  private allowed = { home: { rim: 0, mid: 0, three: 0 }, away: { rim: 0, mid: 0, three: 0 } };
+  private adjusted = { home: -1, away: -1 };
 
   constructor(
     private readonly rng: Rng,
@@ -503,8 +524,98 @@ export class LiveGame {
       if (home.autoSubs) substitute(home, elapsed, total);
       if (away.autoSubs) substitute(away, elapsed, total);
     }
+    if (event) this.trackForCoach(event, before);
+    for (const which of this.ai) if (!this.done && this.clock > 0) this.coach(which);
     if (this.clock <= 0) this.endPeriod();
     return event;
+  }
+
+  /** Let the computer coach one side: timeouts, defense, foul trouble, late-game pace. */
+  enableAiCoach(which: 'home' | 'away') {
+    this.ai.add(which);
+    this.side(which).autoSubs = true;
+  }
+
+  /** Coaching moves since the last call (oldest first). */
+  takeCoachMoves(): CoachMove[] {
+    const out = this.moves;
+    this.moves = [];
+    return out;
+  }
+
+  private trackForCoach(e: PlayEvent, before: [number, number]) {
+    const gained: [number, number] = [this.home.score - before[0], this.away.score - before[1]];
+    for (const [i, which] of [[0, 'home'], [1, 'away']] as const) {
+      const pts = gained[i];
+      if (!pts) continue;
+      this.run = this.run.side === which ? { side: which, pts: this.run.pts + pts } : { side: which, pts };
+      const def = which === 'home' ? 'away' : 'home';
+      if (e.type === 'shot' && e.made && e.kind) this.allowed[def][e.kind] += e.kind === 'three' ? 3 : 2;
+    }
+  }
+
+  private coach(which: 'home' | 'away') {
+    const me = this.side(which);
+    const q = this.period + 1;
+    const clock = this.clock;
+    const add = (m: Omit<CoachMove, 'side' | 'q' | 'clock'>) => this.moves.push({ side: which, q, clock, ...m });
+    const myScore = which === 'home' ? this.home.score : this.away.score;
+    const theirScore = which === 'home' ? this.away.score : this.home.score;
+    const margin = myScore - theirScore;
+    const late = q >= 4 && clock <= 240;
+
+    // Stop the bleeding: a timeout on an 8-0 run (10-0 early in the game, more timeouts saved for the end).
+    const need = q <= 2 ? 10 : 8;
+    const reserve = late ? 0 : 2;
+    if (this.run.side !== which && this.run.pts >= need && me.timeouts > reserve) {
+      add({ kind: 'timeout', run: this.run.pts });
+      this.timeout(which);
+      this.run = { side: which, pts: 0 };
+      return;
+    }
+
+    // Foul trouble: sit a player who is one foul from being in real trouble.
+    for (const c of me.court) {
+      const trouble = q <= 3 ? c.line.pf >= q + 1 : c.line.pf >= 5 && clock > 300;
+      if (!trouble) continue;
+      const bench = me.roster.filter((b) => !me.court.includes(b) && b.line.pf < 4 && b.targetSec > 0);
+      const inn = bench.find((b) => b.p.position === c.p.position) ?? bench.sort((a, b) => b.ovr - a.ovr)[0];
+      if (inn && this.substitute(which, c.p.id, inn.p.id)) {
+        add({ kind: 'foul-sub', playerId: c.p.id, fouls: c.line.pf });
+        return;
+      }
+    }
+
+    // Once a period, from the middle on: adjust the defense to what is hurting us.
+    if (this.adjusted[which] !== this.period && clock <= this.length / 2) {
+      this.adjusted[which] = this.period;
+      const a = this.allowed[which];
+      const total = a.rim + a.mid + a.three;
+      if (total >= 12) {
+        if (a.rim / total > 0.5 && me.tactics.defense !== 'zone') {
+          me.tactics = { ...me.tactics, defense: 'zone' };
+          add({ kind: 'zone' });
+        } else if (a.three / total > 0.45 && me.tactics.defense === 'zone') {
+          me.tactics = { ...me.tactics, defense: 'man' };
+          add({ kind: 'man' });
+        } else if (a.mid / total > 0.4 && me.tactics.defense === 'man') {
+          me.tactics = { ...me.tactics, defense: 'switch' };
+          add({ kind: 'switch' });
+        }
+      }
+      this.allowed[which] = { rim: 0, mid: 0, three: 0 };
+    }
+
+    // Late in the game: chase the score or milk the clock.
+    if (late) {
+      if (margin <= -6 && me.tactics.pace !== 'fast') {
+        me.tactics = { ...me.tactics, pace: 'fast', focus: 'three' };
+        add({ kind: 'push' });
+      } else if (margin >= 6 && me.tactics.pace !== 'slow') {
+        me.tactics = { ...me.tactics, pace: 'slow' };
+        add({ kind: 'slow' });
+      }
+    }
   }
 
   private endPeriod() {

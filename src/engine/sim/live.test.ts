@@ -55,3 +55,27 @@ describe('live game', () => {
     expect(g.state().home.players.find((p) => p.id === inn.id)!.onCourt).toBe(true);
   });
 });
+
+describe('computer coach', () => {
+  it('calls timeouts on runs and adjusts during a game', () => {
+    const league = generateLeague({ seed: 12 });
+    const [a, b] = league.teams;
+    const roster = (id: string) => league.players.filter((p) => p.teamId === id);
+    const kinds = new Set<string>();
+    for (let i = 0; i < 6; i++) {
+      const g = new LiveGame(new Rng(100 + i), { teamId: a!.id, players: roster(a!.id) }, { teamId: b!.id, players: roster(b!.id) });
+      g.enableAiCoach('away');
+      g.runToEnd();
+      const moves = g.takeCoachMoves();
+      for (const m of moves) {
+        expect(m.side).toBe('away');
+        kinds.add(m.kind);
+      }
+      expect(g.state().away.timeouts).toBeGreaterThanOrEqual(0);
+      const r = g.result();
+      expect(r.home.score).not.toBe(r.away.score);
+    }
+    expect(kinds.has('timeout')).toBe(true);
+    expect(kinds.size).toBeGreaterThanOrEqual(3);
+  });
+});

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { LiveGame, Rng, availablePlayers, newSeed, type GameResult, type LiveState, type PlayEvent, type Player, type Tactics, type Team } from '../../engine';
+import { LiveGame, Rng, availablePlayers, newSeed, type CoachMove, type GameResult, type LiveState, type PlayEvent, type Player, type Tactics, type Team } from '../../engine';
 import type { SaveGame } from '../../storage/saves';
 import { photoSrc, TeamBadge } from '../components';
+import { hush, play, say, setSfx, sfxOn } from '../sfx';
 
 export type WatchMode = 'full' | 'key' | 'crunch';
 
@@ -17,6 +18,14 @@ interface Frame {
   /** Score shown on the bug from this frame on. */
   score: [number, number];
   flash?: string;
+  /** Part of an instant replay. */
+  replay?: boolean;
+}
+
+/** Where a shot was taken, on the right-hand half (the same spot the animation uses). */
+function shotSpot(e: PlayEvent, evIndex: number): Pt {
+  const spots = SHOT_SPOT[e.kind ?? 'mid'];
+  return spots[hash(e.player + evIndex) % spots.length]!;
 }
 
 const W = 940;
@@ -219,6 +228,7 @@ export function GameCast({ save, homeId, awayId, mode, onFinish }: { save: SaveG
   if (!game.current) {
     const roster = (id: string) => availablePlayers(league, save.season, id);
     game.current = new LiveGame(new Rng(newSeed()), { teamId: homeId, players: roster(homeId), depth: save.season.depth?.[homeId] }, { teamId: awayId, players: roster(awayId), depth: save.season.depth?.[awayId] });
+    game.current.enableAiCoach(homeId === me ? 'away' : 'home');
   }
   const live = game.current;
   const stars = useMemo(() => {
@@ -239,7 +249,44 @@ export function GameCast({ save, homeId, awayId, mode, onFinish }: { save: SaveG
   const [alert, setAlert] = useState<Alert | null>(null);
   const seenAlerts = useRef(new Set<string>());
   const [note, setNote] = useState<string | null>(null);
-  const [tab, setTab] = useState<'pbp' | 'box'>('pbp');
+  const [tab, setTab] = useState<'pbp' | 'box' | 'shots'>('pbp');
+  const [chartSide, setChartSide] = useState<'home' | 'away'>(mine);
+  const [sound, setSound] = useState(sfxOn);
+  const [voice, setVoice] = useState(false);
+  const [coachFeed, setCoachFeed] = useState<{ key: string; at: number; text: string; side: 'home' | 'away'; clock: string }[]>([]);
+  const lastShown = useRef<number | null>(null);
+  const lastQ = useRef(1);
+  const coachText = (m: CoachMove) => {
+    const t = teamName(m.side);
+    switch (m.kind) {
+      case 'timeout': return `Timeout ${t}: they want to stop a ${m.run}-0 run.`;
+      case 'zone': return `${t} switch to a 2-3 zone to protect the paint.`;
+      case 'man': return `${t} go back to man-to-man to run shooters off the line.`;
+      case 'switch': return `${t} start switching everything on defense.`;
+      case 'push': return `${t} push the pace and hunt threes to get back in it.`;
+      case 'slow': return `${t} slow it down and work the clock.`;
+      case 'foul-sub': return `${t} sit ${name(m.playerId)} with ${m.fouls} fouls.`;
+    }
+  };
+  // Sounds and commentary follow the animation.
+  useEffect(() => {
+    if (!frame) return;
+    if (frame.flash?.startsWith('+')) {
+      play('swish');
+      const ev = events[frame.ev];
+      play(ev && ev.off === 'home' ? (frame.flash === '+3' ? 'roar' : 'cheer') : 'groan');
+    } else if (frame.flash === 'BLOCK') {
+      play('rim');
+      play('cheer');
+    } else if (frame.flash === 'TURNOVER') play('whistle');
+    else if (frame.flight && frame.holder === null && !frame.flash) play('rim');
+    if (voice && (frame.flash || /Rebound|misses|Blocked/.test(frame.caption)) && !frame.replay) say(frame.caption);
+  }, [frame]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (state.q !== lastQ.current || state.done) play('buzzer');
+    lastQ.current = state.q;
+  }, [state.q, state.done]);
+  useEffect(() => () => hush(), []);
   // Coaching confirmations show briefly, then the play-by-play takes over again.
   useEffect(() => {
     if (!note) return;
@@ -288,10 +335,20 @@ export function GameCast({ save, homeId, awayId, mode, onFinish }: { save: SaveG
       }
       const st = live.state();
       setState(st);
+      const moves = live.takeCoachMoves();
+      if (moves.length) {
+        const at = events.length + added.length;
+        setCoachFeed((list) => [...list, ...moves.map((m, k) => ({ key: `c${at}-${k}`, at, text: coachText(m), side: m.side, clock: clockText(m.q, m.clock) }))]);
+        const last = moves.at(-1)!;
+        setNote(coachText(last));
+        if (last.kind === 'timeout') play('whistle');
+        if (voice) say(coachText(last));
+      }
       setEvents((list) => {
         const all = [...list, ...added];
         if (toShow) {
           const prev = all.length > 1 ? all[all.length - 2]!.score : ([0, 0] as [number, number]);
+          lastShown.current = all.length - 1;
           queue.current = framesFor(toShow, all.length - 1, prev, name, teamName);
           setFrame(queue.current.shift()!);
         }
@@ -345,7 +402,26 @@ export function GameCast({ save, homeId, awayId, mode, onFinish }: { save: SaveG
     setAlert(null);
     setPaused(false);
   };
+  const replay = () => {
+    const i = lastShown.current;
+    const ev = i !== null ? events[i] : undefined;
+    if (!ev || i === null) return;
+    const prev = i > 0 ? events[i - 1]!.score : ([0, 0] as [number, number]);
+    queue.current = framesFor(ev, i, prev, name, teamName).map((fr) => ({ ...fr, replay: true, caption: `REPLAY · ${fr.caption}` }));
+    setPaused(false);
+    setFrame(queue.current.shift()!);
+  };
+  const toggleSound = () => {
+    setSfx(!sound);
+    setSound(!sound);
+  };
+  const toggleVoice = () => {
+    if (voice) hush();
+    else say('Commentary on.');
+    setVoice(!voice);
+  };
   const finish = () => {
+    hush();
     if (!live.done) live.runToEnd();
     onFinish(live.result());
   };
@@ -363,8 +439,9 @@ export function GameCast({ save, homeId, awayId, mode, onFinish }: { save: SaveG
   const feed = shownEvents.slice(-7).reverse().map((x) => {
     const who = name(x.player);
     const text = x.type === 'tov' ? `${who} turnover${x.steal ? ` (steal ${name(x.steal)})` : ''}` : x.type === 'ft' ? `${who} ${x.ftm}/${x.fta} FT` : x.made ? `${who} ${x.kind === 'three' ? 'three' : x.kind === 'rim' ? 'layup/dunk' : 'jumper'}${x.andOne ? ' + and-one' : ''}` : `${who} misses ${x.kind === 'three' ? 'a three' : 'a shot'}${x.block ? ` (blocked by ${name(x.block)})` : ''}`;
-    return { key: `${x.q}-${x.clock}-${x.player}-${x.type}`, text, side: x.off, clock: clockText(x.q, x.clock), scored: (x.type === 'shot' && !!x.made) || (x.ftm ?? 0) > 0 };
+    return { key: `${x.q}-${x.clock}-${x.player}-${x.type}`, text, side: x.off, clock: clockText(x.q, x.clock), scored: (x.type === 'shot' && !!x.made) || (x.ftm ?? 0) > 0, coach: false, at: events.indexOf(x) };
   });
+  const feedAll = [...feed, ...coachFeed.slice(-3).map((c) => ({ ...c, scored: false, coach: true }))].sort((a, b) => b.at - a.at || Number(b.coach) - Number(a.coach)).slice(0, 8);
   const my = state[mine];
   const lineup = [...my.players].sort((a, b) => Number(b.onCourt) - Number(a.onCourt) || b.sec - a.sec);
   const atEnd = state.done && queue.current.length === 0;
@@ -384,6 +461,15 @@ export function GameCast({ save, homeId, awayId, mode, onFinish }: { save: SaveG
             </button>
           ))}
         </div>
+        <button type="button" className={`cast-btn icon ${sound ? 'on' : ''}`} onClick={toggleSound} aria-pressed={sound} title="Arena sound">
+          {sound ? '🔊' : '🔇'}
+        </button>
+        <button type="button" className={`cast-btn icon ${voice ? 'on' : ''}`} onClick={toggleVoice} aria-pressed={voice} title="Spoken commentary">
+          🎙
+        </button>
+        <button type="button" className="cast-btn" onClick={replay} disabled={lastShown.current === null || queue.current.length > 0}>
+          ⟲ <span className="hide-sm">Replay</span>
+        </button>
         <button type="button" className="cast-btn" onClick={() => setPaused((p) => !p)} disabled={atEnd}>
           {paused ? '▶ Play' : '❚❚ Pause'}
         </button>
@@ -462,7 +548,7 @@ export function GameCast({ save, homeId, awayId, mode, onFinish }: { save: SaveG
               </g>
             )}
           </svg>
-          <div className="cast-caption">{atEnd ? `Final: ${away.name} ${state.score[1]}, ${home.name} ${state.score[0]}` : (note ?? f?.caption ?? 'Tip-off')}</div>
+          <div className={`cast-caption ${f?.replay ? 'replay' : ''}`}>{atEnd ? `Final: ${away.name} ${state.score[1]}, ${home.name} ${state.score[0]}` : (note ?? f?.caption ?? 'Tip-off')}</div>
         </div>
 
         <aside className="cast-side">
@@ -539,7 +625,11 @@ export function GameCast({ save, homeId, awayId, mode, onFinish }: { save: SaveG
             <button type="button" role="tab" aria-selected={tab === 'box'} className={tab === 'box' ? 'on' : ''} onClick={() => setTab('box')}>
               Box score
             </button>
+            <button type="button" role="tab" aria-selected={tab === 'shots'} className={tab === 'shots' ? 'on' : ''} onClick={() => setTab('shots')}>
+              Shot chart
+            </button>
           </div>
+          {tab === 'shots' && <ShotChart events={events} side={chartSide} onSide={setChartSide} names={{ home: home.name, away: away.name }} color={colors[chartSide]} />}
           {tab === 'box' && (
             <div className="cast-box">
               {(['away', 'home'] as const).map((side) => {
@@ -598,8 +688,8 @@ export function GameCast({ save, homeId, awayId, mode, onFinish }: { save: SaveG
           {tab === 'pbp' && <h3 className="sr-only">Play-by-play</h3>}
           {tab === 'pbp' && (
           <ol className="cast-feed">
-            {feed.map((x) => (
-              <li key={x.key} className={x.scored ? 'scored' : ''}>
+            {feedAll.map((x) => (
+              <li key={x.key} className={`${x.scored ? 'scored' : ''} ${x.coach ? 'coach' : ''}`}>
                 <i style={{ background: colors[x.side] }} />
                 <span className="muted small">{x.clock}</span> {x.text}
               </li>
@@ -659,6 +749,45 @@ export function WatchChooser({ save, onPick, onCancel }: { save: SaveGame; onPic
           </button>
         </div>
       </div>
+    </div>
+  );
+}
+
+/** Every shot so far for one team, on a half court: filled = made, ring = missed. */
+function ShotChart({ events, side, onSide, names, color }: { events: PlayEvent[]; side: 'home' | 'away'; onSide: (s: 'home' | 'away') => void; names: { home: string; away: string }; color: string }) {
+  const shots = events.map((e, i) => ({ e, i })).filter(({ e }) => e.type === 'shot' && e.off === side);
+  const zone = (k: 'rim' | 'mid' | 'three') => {
+    const z = shots.filter(({ e }) => (e.kind ?? 'mid') === k);
+    return `${z.filter(({ e }) => e.made).length}/${z.length}`;
+  };
+  return (
+    <div className="shot-chart">
+      <div className="cast-seg" role="group" aria-label="Team">
+        {(['away', 'home'] as const).map((s) => (
+          <button key={s} type="button" className={side === s ? 'on' : ''} onClick={() => onSide(s)}>
+            {names[s]}
+          </button>
+        ))}
+      </div>
+      <svg viewBox="470 0 470 500" role="img" aria-label={`Shot chart, ${names[side]}`}>
+        <rect x="470" y="0" width="470" height="500" fill="#f3e3c3" />
+        <g fill="none" stroke="#9a7b4f" strokeWidth="3">
+          <line x1="470" y1="0" x2="470" y2="500" />
+          <rect x="750" y="190" width="190" height="120" />
+          <circle cx="750" cy="250" r="60" />
+          <path d="M940 30 H800 A 235 235 0 0 0 800 470 H940" />
+          <circle cx="884" cy="250" r="9" stroke="#e05a00" />
+          <line x1="910" y1="220" x2="910" y2="280" />
+        </g>
+        {shots.map(({ e, i }) => {
+          const p = shotSpot(e, i);
+          const j = { x: p.x + ((i * 37) % 23) - 11, y: p.y + ((i * 53) % 23) - 11 };
+          return e.made ? <circle key={i} cx={j.x} cy={j.y} r="9" fill={color} stroke="#fff" strokeWidth="2" /> : <circle key={i} cx={j.x} cy={j.y} r="8" fill="none" stroke="#7a1010" strokeWidth="3" opacity="0.75" />;
+        })}
+      </svg>
+      <p className="small muted">
+        At the rim {zone('rim')} · Mid-range {zone('mid')} · Threes {zone('three')}
+      </p>
     </div>
   );
 }
