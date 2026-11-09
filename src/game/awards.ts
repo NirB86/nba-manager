@@ -267,7 +267,7 @@ export function seasonReview(save: SaveGame) {
   const expected = ownerExpectation(league, me);
   const goalRound = expected.label.startsWith('Win') ? 5 : expected.label.startsWith('Reach') ? 3 : expected.label.startsWith('Make') ? 1 : expected.label.startsWith('Compete') ? 0 : -1;
   // Score: wins against expectation, plus playoff progress against the goal.
-  const score = (w - expected.wins) / 6 + (deepest - goalRound) * 0.9 + (season.champion === me ? 1.5 : 0);
+  const score = (w - expected.wins) / 6 + (deepest - goalRound) * 0.6 + (season.champion === me ? 1.5 : 0);
   const idx = Math.max(0, Math.min(GRADES.length - 1, Math.round(2.5 + score)));
   const grade = GRADES[idx]!;
   const stage = season.champion === me ? 'won the championship' : deepest >= 4 ? 'reached the Finals' : deepest >= 3 ? 'reached the conference finals' : deepest >= 2 ? 'reached the second round' : deepest >= 1 ? 'made the playoffs' : deepest === 0 ? 'lost in the play-in' : 'missed the playoffs';

@@ -218,7 +218,7 @@ export function GameCast({ save, homeId, awayId, mode, onFinish }: { save: SaveG
   const game = useRef<LiveGame | null>(null);
   if (!game.current) {
     const roster = (id: string) => availablePlayers(league, save.season, id);
-    game.current = new LiveGame(new Rng(newSeed()), { teamId: homeId, players: roster(homeId) }, { teamId: awayId, players: roster(awayId) });
+    game.current = new LiveGame(new Rng(newSeed()), { teamId: homeId, players: roster(homeId), depth: save.season.depth?.[homeId] }, { teamId: awayId, players: roster(awayId), depth: save.season.depth?.[awayId] });
   }
   const live = game.current;
   const stars = useMemo(() => {

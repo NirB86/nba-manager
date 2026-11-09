@@ -1016,3 +1016,25 @@ select.input { appearance: auto; }
 .allnba summary { cursor: pointer; font-weight: 600; }
 .honors-soon { margin: 4px 0 12px; }
 @media (max-width: 480px) { .honors-list { grid-template-columns: 1fr; gap: 2px; } .honors-list dd { margin-bottom: 6px; } }
+
+/* Depth chart */
+.roster-tabs { margin-bottom: 12px; }
+.depth-head { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.depth-head p { margin: 0; flex: 1 1 260px; }
+.depth-actions { display: flex; gap: 8px; align-items: center; }
+.depth-list { list-style: none; margin: 0; padding: 0; }
+.depth-list li { display: grid; grid-template-columns: 34px 30px 1fr auto; align-items: center; gap: 8px; padding: 7px 4px; border-bottom: 1px solid var(--border); }
+.depth-list li.starter { background: color-mix(in srgb, var(--team) 7%, transparent); }
+.depth-list li.first-bench { border-top: 2px solid var(--border-strong); }
+.depth-list li.out { opacity: 0.55; }
+.depth-slot { font-weight: 800; font-size: 13px; text-align: center; color: var(--text-2); }
+.depth-move { display: flex; flex-direction: column; gap: 2px; }
+.depth-move button, .depth-min button { border: 1px solid var(--border); background: var(--surface); border-radius: var(--radius-sm); cursor: pointer; line-height: 1; color: var(--text); }
+.depth-move button { font-size: 10px; padding: 2px 6px; }
+.depth-move button:disabled { opacity: 0.3; cursor: default; }
+.depth-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.depth-min { display: flex; align-items: center; gap: 4px; }
+.depth-min button { width: 28px; height: 28px; font-size: 16px; }
+.depth-min span { min-width: 24px; text-align: center; font-weight: 700; font-variant-numeric: tabular-nums; }
+.depth-list li[data-label] { position: relative; margin-top: 22px; }
+.depth-list li[data-label]::before { content: attr(data-label); position: absolute; left: 4px; top: -19px; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-3); }

@@ -3,7 +3,7 @@
 // synced and resumed anywhere.
 
 import { Rng } from './random';
-import { simulateGame, type BoxLine, type GameResult, type PlayEvent } from './sim/game';
+import { simulateGame, type BoxLine, type DepthChart, type GameResult, type PlayEvent } from './sim/game';
 import type { LeagueFile, Team } from './types';
 import type { MultiTrade } from './trade';
 
@@ -62,6 +62,8 @@ export interface SeasonState {
   injuries?: Record<string, Injury>;
   /** Season awards, set when the regular season ends (Finals MVP after the Finals). */
   awards?: SeasonAwards;
+  /** Depth charts set by coaches (the user), by team id. Teams without one use the default rotation. */
+  depth?: Record<string, DepthChart>;
   /** The All-Star Game, played just past the middle of the regular season. */
   allStar?: AllStarGame;
 }
@@ -354,7 +356,7 @@ export function availablePlayers(league: LeagueFile, season: SeasonState, teamId
 
 function playGame(league: LeagueFile, rng: Rng, g: ScheduledGame, log?: PlayEvent[], played?: GameResult, season?: SeasonState): GameResult {
   const roster = (teamId: string) => (season ? availablePlayers(league, season, teamId) : league.players.filter((p) => p.teamId === teamId));
-  const result = played ?? simulateGame(rng, { teamId: g.home, players: roster(g.home) }, { teamId: g.away, players: roster(g.away) }, log);
+  const result = played ?? simulateGame(rng, { teamId: g.home, players: roster(g.home), depth: season?.depth?.[g.home] }, { teamId: g.away, players: roster(g.away), depth: season?.depth?.[g.away] }, log);
   g.hs = result.home.score;
   g.as = result.away.score;
   g.ot = result.overtimes;

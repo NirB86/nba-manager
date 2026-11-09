@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { displayRating, fullName, playerAge, playerOverall, salaryIn, type Player } from '../../engine';
+import { availablePlayers, displayRating, fullName, playerAge, playerOverall, rotation, salaryIn, type Player } from '../../engine';
 import { morale, MORALE_LABEL } from '../../game/morale';
 import { potentialRange } from '../../game/scouting';
 import type { SaveGame } from '../../storage/saves';
@@ -160,13 +160,109 @@ export function Roster() {
   const { save } = useCareer();
   const players = save.league.players.filter((p) => p.teamId === save.career.teamId);
   const twoWay = players.filter((p) => p.contract?.kind === 'two-way').length;
+  const [tab, setTab] = useState<'players' | 'depth'>('players');
   return (
     <>
       <PageHeader
         title="Roster"
         subtitle={`${players.length - twoWay} of ${save.league.settings.rosterMax} roster spots${twoWay ? ` + ${twoWay} two-way` : ''} · tap a column to sort, a player for details`}
       />
-      <RosterTable save={save} players={players} showMood />
+      <div className="roster-tabs">
+        <Segmented name="Roster view" value={tab} onChange={setTab} options={[{ value: 'players', label: 'Players' }, { value: 'depth', label: 'Depth chart' }]} />
+      </div>
+      {tab === 'players' ? <RosterTable save={save} players={players} showMood /> : <DepthChartEditor />}
     </>
+  );
+}
+
+/**
+ * Starters, bench order and target minutes. The engine follows this order
+ * and these minutes in every simulated and live game; injured players are
+ * skipped automatically.
+ */
+function DepthChartEditor() {
+  const { save, update } = useCareer();
+  const me = save.career.teamId;
+  const all = save.league.players.filter((p) => p.teamId === me && p.contract?.kind !== 'two-way');
+  const avail = availablePlayers(save.league, save.season, me);
+  const availIds = new Set(avail.map((p) => p.id));
+  const saved = save.season.depth?.[me];
+  // Show everyone (injured too), in the saved order or the default rotation.
+  const base = rotation(all, saved);
+  const rows = base.map((r) => ({ ...r, minutes: saved?.minutes?.[r.player.id] ?? r.targetMin }));
+  const live = rotation(avail, saved);
+  const liveMin = new Map(live.map((r) => [r.player.id, r.targetMin]));
+  const total = rows.filter((r) => availIds.has(r.player.id)).reduce((s, r) => s + r.minutes, 0);
+
+  const save_ = (order: string[], minutes: Record<string, number>) =>
+    update((s) => ({ ...s, season: { ...s.season, depth: { ...(s.season.depth ?? {}), [me]: { starters: order.slice(0, 5), bench: order.slice(5), minutes } } } }));
+  const order = rows.map((r) => r.player.id);
+  const mins = Object.fromEntries(rows.map((r) => [r.player.id, r.minutes]));
+  const move = (i: number, d: number) => {
+    const j = i + d;
+    if (j < 0 || j >= order.length) return;
+    const next = [...order];
+    [next[i], next[j]] = [next[j]!, next[i]!];
+    save_(next, mins);
+  };
+  const setMin = (id: string, v: number) => save_(order, { ...mins, [id]: Math.max(0, Math.min(44, v)) });
+  const reset = () => update((s) => {
+    const depth = { ...(s.season.depth ?? {}) };
+    delete depth[me];
+    return { ...s, season: { ...s.season, depth } };
+  });
+
+  return (
+    <div className="card depth-card">
+      <div className="depth-head">
+        <p className="muted small">
+          The top five start. Use the arrows to change the order and −/+ for target minutes; the game scales them to 240 a night. Injured players are skipped and the next man moves up.
+        </p>
+        <div className="depth-actions">
+          <span className={`pill ${Math.abs(total - 240) <= 10 ? 'pill-good' : 'pill-warn'}`}>{total} / 240 min</span>
+          {saved && (
+            <button type="button" className="btn btn-sm" onClick={reset}>
+              Reset to automatic
+            </button>
+          )}
+        </div>
+      </div>
+      <ol className="depth-list">
+        {rows.map((r, i) => {
+          const p = r.player;
+          const out = !availIds.has(p.id);
+          return (
+            <li key={p.id} className={`${i < 5 ? 'starter' : ''} ${out ? 'out' : ''} ${i === 5 ? 'first-bench' : ''}`} data-label={i === 0 ? 'Starters' : i === 5 ? 'Bench' : undefined}>
+              <span className="depth-slot">{i + 1}</span>
+              <span className="depth-move">
+                <button type="button" aria-label={`Move ${fullName(p)} up`} disabled={i === 0} onClick={() => move(i, -1)}>
+                  ▲
+                </button>
+                <button type="button" aria-label={`Move ${fullName(p)} down`} disabled={i === rows.length - 1} onClick={() => move(i, 1)}>
+                  ▼
+                </button>
+              </span>
+              <a className="depth-name row-link" href={href('c', save.id, 'player', p.id)}>
+                <strong>{fullName(p)}</strong>
+                <span className="muted small">
+                  {' '}
+                  {p.position} · {displayRating(playerOverall(p))}
+                </span>
+                <InjuryPill injury={save.season.injuries?.[p.id]} />
+              </a>
+              <span className="depth-min">
+                <button type="button" aria-label="Fewer minutes" onClick={() => setMin(p.id, r.minutes - 2)}>
+                  −
+                </button>
+                <span title={out ? 'Injured' : `About ${liveMin.get(p.id) ?? 0} minutes after scaling`}>{r.minutes}</span>
+                <button type="button" aria-label="More minutes" onClick={() => setMin(p.id, r.minutes + 2)}>
+                  +
+                </button>
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
   );
 }

@@ -75,6 +75,42 @@ export interface SimTeam {
   teamId: string;
   /** Players available tonight, any order. */
   players: Player[];
+  /** The coach's depth chart; without one the best players start and play most. */
+  depth?: DepthChart;
+}
+
+/** Starters, bench order and target minutes set by the coach. */
+export interface DepthChart {
+  /** Five player ids. Missing or unavailable starters are replaced by the next in the order. */
+  starters: string[];
+  /** Everyone else, first off the bench first. Players not listed come last, by rating. */
+  bench: string[];
+  /** Target minutes per player id (0 = does not play unless needed). Scaled to 240 a game. */
+  minutes?: Record<string, number>;
+}
+
+/**
+ * Rotation order and target seconds for the available players under a
+ * depth chart (or the default by rating). Exported for the depth chart screen.
+ */
+export function rotation(players: Player[], depth?: DepthChart): { player: Player; targetMin: number; starter: boolean }[] {
+  const byOvr = [...players].sort((x, y) => overall(y.attributes, y.position) - overall(x.attributes, x.position));
+  if (!depth) {
+    const five = new Set(pickStartersBy(byOvr).map((p) => p.id));
+    return byOvr.map((p, i) => ({ player: p, targetMin: ROTATION_MIN[i] ?? 0, starter: five.has(p.id) }));
+  }
+  const ids = new Map(players.map((p) => [p.id, p]));
+  const listed = [...depth.starters, ...depth.bench].filter((id, i, a) => ids.has(id) && a.indexOf(id) === i);
+  const order = [...listed.map((id) => ids.get(id)!), ...byOvr.filter((p) => !listed.includes(p.id))];
+  const starters = new Set(depth.starters.filter((id) => ids.has(id)));
+  for (const p of order) if (starters.size < 5 && !starters.has(p.id)) starters.add(p.id);
+  // Starters first, then the bench in order.
+  const sorted = [...order.filter((p) => starters.has(p.id)), ...order.filter((p) => !starters.has(p.id))];
+  const raw = sorted.map((p, i) => depth.minutes?.[p.id] ?? ROTATION_MIN[i] ?? 0);
+  const total = raw.reduce((s, m) => s + m, 0);
+  // Scale to a full game, capped at 44 minutes for anyone.
+  const scale = total > 0 ? 240 / total : 1;
+  return sorted.map((p, i) => ({ player: p, targetMin: Math.min(44, Math.round(raw[i]! * scale)), starter: starters.has(p.id) }));
 }
 
 const QUARTER_SEC = 12 * 60;
@@ -106,16 +142,22 @@ class Side {
   timeouts = TIMEOUTS;
 
   constructor(team: SimTeam) {
-    const sorted = [...team.players]
-      .map((p) => ({ p, a: p.attributes, ovr: overall(p.attributes, p.position) }))
-      .sort((x, y) => y.ovr - x.ovr);
-    this.roster = sorted.map((x, i) => ({
-      ...x,
-      line: emptyLine(x.p.id),
-      targetSec: (ROTATION_MIN[i] ?? 0) * 60,
-      energy: 1,
-    }));
-    this.court = pickStarters(this.roster);
+    if (team.depth) {
+      const rot = rotation(team.players, team.depth);
+      this.roster = rot.map((r) => ({ p: r.player, a: r.player.attributes, ovr: overall(r.player.attributes, r.player.position), line: emptyLine(r.player.id), targetSec: r.targetMin * 60, energy: 1 }));
+      this.court = this.roster.filter((_, i) => rot[i]!.starter);
+    } else {
+      const sorted = [...team.players]
+        .map((p) => ({ p, a: p.attributes, ovr: overall(p.attributes, p.position) }))
+        .sort((x, y) => y.ovr - x.ovr);
+      this.roster = sorted.map((x, i) => ({
+        ...x,
+        line: emptyLine(x.p.id),
+        targetSec: (ROTATION_MIN[i] ?? 0) * 60,
+        energy: 1,
+      }));
+      this.court = pickStarters(this.roster);
+    }
     for (const c of this.court) c.line.starter = true;
   }
 
@@ -126,6 +168,19 @@ class Side {
 
 function emptyLine(playerId: string): BoxLine {
   return { playerId, starter: false, sec: 0, pts: 0, fgm: 0, fga: 0, tpm: 0, tpa: 0, ftm: 0, fta: 0, orb: 0, drb: 0, ast: 0, stl: 0, blk: 0, tov: 0, pf: 0, pm: 0 };
+}
+
+function pickStartersBy(players: Player[]): Player[] {
+  const top = players.slice(0, 5);
+  const isGuard = (p: Player) => p.position === 'PG' || p.position === 'SG';
+  const isBig = (p: Player) => p.position === 'PF' || p.position === 'C';
+  for (const need of [isGuard, isBig]) {
+    if (!top.some(need)) {
+      const swapIn = players.slice(5).find(need);
+      if (swapIn) top[4] = swapIn;
+    }
+  }
+  return top;
 }
 
 /** Best five, but always at least one guard and one big. */
