@@ -977,3 +977,13 @@ select.input { appearance: auto; }
 .cast-box-table td.bad { color: var(--red); font-weight: 700; }
 .cast-box-table tfoot td { font-weight: 700; border-top: 2px solid var(--black); }
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* Music: tappable tracks and the Spotify dock */
+.music-track { flex: 1; display: block; min-height: 32px; padding: 0; border: 0; background: transparent; font: inherit; text-align: left; cursor: pointer; color: inherit; }
+.spotify-settings { margin-top: 16px; padding-top: 12px; border-top: 1px solid #e2e5ea; }
+.spotify-settings h3 { margin: 0 0 6px; font-family: var(--display); font-weight: 900; font-style: italic; font-size: 18px; text-transform: uppercase; }
+.spotify-link { display: grid; gap: 4px; margin-top: 8px; }
+.spotify-dock { position: fixed; z-index: 80; right: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); width: min(360px, calc(100vw - 24px)); background: #121212; border-radius: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35); }
+.spotify-dock iframe { display: block; border: 0; border-radius: 12px; }
+.spotify-close { position: absolute; top: -10px; right: -10px; width: 28px; height: 28px; border-radius: 50%; border: 2px solid #fff; background: var(--black); color: #fff; font-size: 16px; line-height: 1; cursor: pointer; }
+@media (max-width: 899px) { .spotify-dock { bottom: calc(var(--tabbar-h, 64px) + 10px + env(safe-area-inset-bottom)); } }
