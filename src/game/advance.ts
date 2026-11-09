@@ -4,6 +4,7 @@
 import { Rng, fullName, newSeed, playerOverall, simulateDay, standings, teamName, type DayReport, type GameResult, type PlayEvent, type ScheduledGame, type SeasonState } from '../engine';
 import type { InboxMessage, SaveGame } from '../storage/saves';
 import { weeklyMarket } from './market';
+import { assessTax, financeDay, ownerVerdict } from './finance';
 import { RECORD_LABEL, RECORD_NEWS, updateRecords } from './history';
 import { announceAwards, computeFinalsMvp, maybeAllStar, seasonReview } from './awards';
 
@@ -61,10 +62,14 @@ function afterDay(save: SaveGame, report: DayReport, rng: Rng, before: { phase: 
   // Once a game week: offers, AI trades and rumors.
   if (season.phase === 'regular' && season.day !== before.day && season.day % 7 === 0) weeklyMarket(save, rng);
   if (season.phase === 'regular' && season.day !== before.day) maybeAllStar(save, rng);
+  financeDay(save, report, before.day);
   if (report.phaseChanged) {
-    if (before.phase === 'regular' && season.phase === 'playoffs') announceAwards(save);
+    if (before.phase === 'regular' && season.phase === 'playoffs') {
+      announceAwards(save);
+      assessTax(save);
+    }
     news(save, before.phase, before.series);
-    if (season.phase === 'done') seasonReview(save);
+    if (season.phase === 'done') ownerVerdict(save, seasonReview(save));
   }
 }
 

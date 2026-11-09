@@ -1065,3 +1065,22 @@ select.input { appearance: auto; }
 .hof-honors { display: block; font-size: 12px; font-weight: 700; color: #8a6514; margin-top: 2px; }
 .career-table tr.current td { font-style: italic; }
 @media (max-width: 480px) { .records { grid-template-columns: 1fr 1fr; gap: 8px; } .records li { flex-direction: column; align-items: flex-start; gap: 2px; padding: 6px 8px; } .rec-value { font-size: 26px; text-align: left; min-width: 0; } }
+
+/* Club books */
+.books-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 0 16px; }
+.books td, .books th { padding: 5px 4px; }
+.books tr.sum th { border-top: 2px solid var(--border-strong); }
+.books tr.gain th:last-child { color: var(--good); }
+.books tr.loss th:last-child { color: var(--bad); }
+.ticket-price { display: grid; gap: 6px; }
+.ticket-price input { width: 100%; accent-color: var(--team); }
+.ticket-proj { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; margin-top: 10px; font-size: 14px; }
+.crowd-bar { height: 10px; background: var(--surface-2); border: 1px solid var(--border); margin-top: 6px; }
+.crowd-bar i { display: block; height: 100%; background: var(--team); transition: width 0.2s; }
+
+/* Job offers */
+.job-offers { border-top: 4px solid var(--info); }
+.job-offers.fired { border-top-color: var(--bad); }
+.job-list { list-style: none; margin: 10px 0; padding: 0; display: grid; gap: 8px; }
+.job-list li { display: grid; grid-template-columns: 40px 1fr auto; gap: 12px; align-items: center; padding: 8px; background: var(--surface-2); }
+@media (max-width: 480px) { .job-list li { grid-template-columns: 40px 1fr; } .job-list li .btn { grid-column: 1 / -1; } }

@@ -11,7 +11,9 @@ import {
   type CapStatus,
   type CbaSettings,
 } from '../../engine';
+import { useState } from 'react';
 import { useCareer } from '../career-context';
+import { ARENA_CAPACITY, demand, financeView, luxuryTaxBill, ownerBudget, profit, revenue, type SeasonLedger } from '../../game/finance';
 import { Card, DraftMark, Pill, Stat } from '../components';
 import { money, seasonLabel } from '../format';
 import { href } from '../router';
@@ -92,6 +94,8 @@ export function Finances() {
         <Stat label={toTax >= 0 ? 'Room under the tax' : 'Over the tax by'} value={money(Math.abs(toTax))} />
         <Stat label={toApron >= 0 ? 'Room under 2nd apron' : 'Over 2nd apron by'} value={money(Math.abs(toApron))} />
       </div>
+
+      <ClubBooks />
 
       <Card title="Payroll against the cap lines">
         <CapMeter cba={cba} payroll={payroll} />
@@ -213,5 +217,138 @@ function OwedPicks() {
         .map((p) => `${p.season} ${p.round === 1 ? '1st' : '2nd'} to ${league.teams.find((t) => t.id === p.ownerTeamId)?.abbrev ?? '?'}${p.protection ? ` (${p.protection.toLowerCase()})` : ''}`)
         .join(' · ')}
     </p>
+  );
+}
+
+const m = (v: number) => `${v < 0 ? '−' : ''}$${(Math.abs(v) / 1e6).toFixed(1)}M`;
+
+/** Season books, ticket pricing, the owner's budget and confidence. */
+function ClubBooks() {
+  const { save, update } = useCareer();
+  const f = financeView(save);
+  const l = f.ledger;
+  const me = save.career.teamId;
+  const payroll = teamPayroll(save.league, me, save.league.meta.season);
+  const budget = ownerBudget(save);
+  const tax = luxuryTaxBill(save.league.settings, payroll);
+  const [price, setPrice] = useState(f.ticketPrice);
+  const fill = demand(save, price);
+  const crowd = Math.round(ARENA_CAPACITY * fill);
+  const conf = f.confidence;
+  const confTone = conf >= 70 ? 'good' : conf >= 45 ? 'neutral' : conf >= 25 ? 'warn' : 'bad';
+  const setTicket = (v: number) => {
+    if (v === f.ticketPrice) return;
+    update((s) => {
+      const fin = structuredClone(financeView(s));
+      fin.ticketPrice = v;
+      return { ...s, finance: fin };
+    });
+  };
+  const rows: [string, number][] = [
+    ['Tickets', l.tickets],
+    ['Playoff gates', l.playoffs],
+    ['Media rights', l.media],
+    ['Merchandise', l.merch],
+  ];
+  const costs: [string, number][] = [
+    ['Player salaries', l.payroll],
+    ['Luxury tax', l.tax],
+    ['Operations', l.ops ?? 0],
+  ];
+  return (
+    <>
+      <div className="stats-row">
+        <Stat label="Owner confidence" value={`${Math.round(conf)}`} hint={<Pill tone={confTone}>{conf >= 70 ? 'Secure' : conf >= 45 ? 'Stable' : conf >= 25 ? 'Under pressure' : 'Job at risk'}</Pill>} />
+        <Stat label="Profit this season" value={m(profit(l))} hint={<span className="muted small">{l.homeGames} home games</span>} />
+        <Stat label="Owner payroll budget" value={money(budget)} hint={<Pill tone={payroll > budget * 1.02 ? 'bad' : 'good'}>{payroll > budget * 1.02 ? `${money(payroll - budget)} over` : 'Within budget'}</Pill>} />
+        <Stat label="Projected tax bill" value={tax ? m(tax) : 'None'} />
+      </div>
+      <div className="books-grid">
+        <Card title={`Books · ${seasonLabel(l.season)}`}>
+          <table className="table compact books">
+            <tbody>
+              {rows.map(([k, v]) => (
+                <tr key={k}>
+                  <td>{k}</td>
+                  <td className="num">{m(v)}</td>
+                </tr>
+              ))}
+              <tr className="sum">
+                <th>Revenue</th>
+                <th className="num">{m(revenue(l))}</th>
+              </tr>
+              {costs.map(([k, v]) => (
+                <tr key={k}>
+                  <td>{k}</td>
+                  <td className="num">{v ? m(-v) : '—'}</td>
+                </tr>
+              ))}
+              <tr className={`sum ${profit(l) < 0 ? 'loss' : 'gain'}`}>
+                <th>Profit</th>
+                <th className="num">{m(profit(l))}</th>
+              </tr>
+            </tbody>
+          </table>
+          <p className="muted small">The tax bill is assessed on the payroll at the end of the regular season. Losing money and going over the owner's budget cost you confidence.</p>
+        </Card>
+        <Card title="Ticket prices">
+          <label className="ticket-price">
+            <span>
+              Average ticket <strong>${price}</strong>
+            </span>
+            <input type="range" min={40} max={300} step={5} value={price} onChange={(e) => setPrice(Number(e.target.value))} onPointerUp={() => setTicket(price)} onKeyUp={() => setTicket(price)} onBlur={() => setTicket(price)} />
+          </label>
+          <div className="ticket-proj">
+            <span>
+              Expected crowd <strong>{crowd.toLocaleString()}</strong> / {ARENA_CAPACITY.toLocaleString()} ({Math.round(fill * 100)}%)
+            </span>
+            <span>
+              Gate per game <strong>{m(crowd * price)}</strong>
+            </span>
+          </div>
+          <div className="crowd-bar" aria-hidden>
+            <i style={{ width: `${Math.round(fill * 100)}%` }} />
+          </div>
+          <p className="muted small">
+            Winning and stars fill the building; high prices empty it. Playoff tickets sell at 1.6× this price.
+            {l.homeGames ? ` Average crowd so far: ${Math.round(l.attendance / l.homeGames).toLocaleString()}.` : ''}
+          </p>
+        </Card>
+      </div>
+      {f.history.length > 0 && <BooksHistory history={f.history} />}
+    </>
+  );
+}
+
+function BooksHistory({ history }: { history: SeasonLedger[] }) {
+  return (
+    <Card title="Past seasons">
+      <div className="table-wrap">
+        <table className="table compact">
+          <thead>
+            <tr>
+              <th>Season</th>
+              <th className="num">Revenue</th>
+              <th className="num hide-sm">Salaries</th>
+              <th className="num hide-sm">Tax</th>
+              <th className="num">Profit</th>
+              <th className="num hide-sm">Avg crowd</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[...history].reverse().map((l) => (
+              <tr key={l.season}>
+                <td>{seasonLabel(l.season)}</td>
+                <td className="num">{m(revenue(l))}</td>
+                <td className="num hide-sm">{m(l.payroll)}</td>
+                <td className="num hide-sm">{l.tax ? m(l.tax) : '—'}</td>
+                <td className={`num ${profit(l) < 0 ? 'over' : ''}`}>{m(profit(l))}</td>
+                <td className="num hide-sm">{l.homeGames ? Math.round(l.attendance / l.homeGames).toLocaleString() : '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </Card>
   );
 }

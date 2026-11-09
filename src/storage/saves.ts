@@ -4,6 +4,7 @@
 
 import type { LeagueSeasonRecord } from '../game/awards';
 import type { HallOfFamer, Records } from '../game/history';
+import type { FinanceState, JobOffer } from '../game/finance';
 import type { OffseasonState } from '../game/offseason';
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import { Rng, newSeason, newSeed, validateLeague, teamName, type LeagueFile, type SeasonState } from '../engine';
@@ -26,6 +27,10 @@ export interface CareerSettings {
   watchMode?: 'full' | 'key' | 'crunch';
   /** The owner's grade for each finished season. */
   reviews?: { season: number; grade: string; wins: number; losses: number; expectation: string }[];
+  /** Fired by the owner: pick a new job from the offers. */
+  fired?: boolean;
+  /** Teams you ran before, and the league year you left. */
+  jobs?: { teamId: string; until: number }[];
 }
 
 export interface InboxMessage {
@@ -62,6 +67,10 @@ export interface SaveGame {
   records?: Records;
   /** Retired greats, in order of induction. */
   hallOfFame?: HallOfFamer[];
+  /** Your club's money and the owner's confidence in you. */
+  finance?: FinanceState;
+  /** Teams that want to hire you (after being fired, or after a great season). */
+  jobOffers?: JobOffer[];
 }
 
 export interface SaveSummary {

@@ -10,7 +10,6 @@ import {
   simulateGame,
   standings,
   teamName,
-  teamRating,
   type LeagueFile,
   type Player,
   type SeasonAwards,
@@ -18,6 +17,7 @@ import {
   type StatTotals,
 } from '../engine';
 import type { InboxMessage, SaveGame } from '../storage/saves';
+import { TIER_ROUND, TIER_TARGET, ownerExpectation } from './career';
 
 export interface LeagueSeasonRecord {
   season: number;
@@ -239,20 +239,10 @@ export function computeFinalsMvp(save: SaveGame): string | null {
   );
 }
 
-/** What the owner expected: from where the team ranked in strength at the end of the season. */
-export function ownerExpectation(league: LeagueFile, teamId: string): { label: string; wins: number } {
-  const ranked = [...league.teams].sort((a, b) => teamRating(league, b.id) - teamRating(league, a.id));
-  const rank = ranked.findIndex((t) => t.id === teamId) + 1;
-  const n = league.teams.length;
-  const wins = Math.round(58 - ((rank - 1) / Math.max(1, n - 1)) * 34);
-  const label = rank <= 3 ? 'Win the title' : rank <= 8 ? 'Reach the conference finals' : rank <= 14 ? 'Make the playoffs' : rank <= 20 ? 'Compete for the play-in' : 'Develop the young players';
-  return { label, wins };
-}
-
 const GRADES = ['F', 'D', 'C', 'B', 'A', 'A+'] as const;
 
 /** The owner's end-of-season review, plus the league record for this season. */
-export function seasonReview(save: SaveGame) {
+export function seasonReview(save: SaveGame): string {
   const { league, season } = save;
   const me = save.career.teamId;
   if (season.awards) season.awards.finalsMvp ??= computeFinalsMvp(save);
@@ -267,8 +257,9 @@ export function seasonReview(save: SaveGame) {
   const w = row?.w ?? 0;
   const l = row?.l ?? 0;
   const deepest = season.series.filter((s) => s.top.teamId === me || s.bottom.teamId === me).reduce((m, s) => Math.max(m, s.round + (s.winner === me ? 1 : 0)), -1);
-  const expected = ownerExpectation(league, me);
-  const goalRound = expected.label.startsWith('Win') ? 5 : expected.label.startsWith('Reach') ? 3 : expected.label.startsWith('Make') ? 1 : expected.label.startsWith('Compete') ? 0 : -1;
+  const exp = ownerExpectation(league, me);
+  const expected = { label: exp.goal, wins: Math.round(TIER_TARGET[exp.tier] * (w + l || 82)) };
+  const goalRound = TIER_ROUND[exp.tier];
   // Score: wins against expectation, plus playoff progress against the goal.
   const score = (w - expected.wins) / 6 + (deepest - goalRound) * 0.6 + (season.champion === me ? 1.5 : 0);
   const idx = Math.max(0, Math.min(GRADES.length - 1, Math.round(2.5 + score)));
@@ -289,6 +280,7 @@ export function seasonReview(save: SaveGame) {
       }`,
     ),
   );
+  return grade;
 }
 
 /** Honors a player has won in this save, newest first, for badges on his page. */

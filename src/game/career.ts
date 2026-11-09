@@ -28,6 +28,12 @@ export const TIER_LABEL: Record<Expectation['tier'], string> = {
   rebuild: 'Rebuild',
 };
 
+/** Win percentage the owner has in mind for each tier. */
+export const TIER_TARGET: Record<Expectation['tier'], number> = { title: 0.68, contender: 0.6, playoffs: 0.53, 'play-in': 0.46, rebuild: 0.35 };
+
+/** How deep a playoff run each tier expects: playoff rounds won (0 = reach the first round, -1 = play-in). */
+export const TIER_ROUND: Record<Expectation['tier'], number> = { title: 5, contender: 3, playoffs: 1, 'play-in': 0, rebuild: -1 };
+
 /** What the owner expects, from the team's league rank by rating. */
 export function ownerExpectation(league: LeagueFile, teamId: string): Expectation & { rank: number } {
   const ranked = teamSummaries(league).sort((a, b) => b.rating - a.rating);

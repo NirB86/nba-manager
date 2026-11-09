@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { CAP_STATUS_LABEL, capStatus, displayRating, rosterOf, playerOverall, teamPayroll, teamRating, type GameResult, type ImageCredit, type Player, type ScheduledGame } from '../../engine';
 import { advance, advanceToGameDay, finishLiveGame, lastUserGame, nextUserGame, type AdvanceTarget, type Progress } from '../../game/advance';
 import { allStarDay } from '../../game/awards';
+import { acceptJob, declineOffers, financeView } from '../../game/finance';
+import { ownerExpectation } from '../../game/career';
 import { conferenceRank, leagueWire, ownerMood } from '../../game/news';
 import { morale, MORALE_LABEL, type MoraleLevel } from '../../game/morale';
 import type { SaveGame } from '../../storage/saves';
@@ -178,6 +180,10 @@ function MatchupBoard() {
             </div>
           )}
         </>
+      ) : save.career.fired ? (
+        <a className="btn btn-primary btn-lg matchup-play" href="#job-offers">
+          See your job offers
+        </a>
       ) : (
         <a className="btn btn-primary btn-lg matchup-play" href={href('c', save.id, 'offseason')}>
           {save.offseason ? (save.offseason.stage === 'draft' ? 'Back to the draft' : 'Back to free agency') : 'Start the offseason'}
@@ -291,6 +297,7 @@ export function Home({ messageId }: { messageId?: string }) {
     <>
       <MatchupBoard />
       <Ticker />
+      <JobOffers />
 
       {headline && (
         <a className="headline" href={href('c', save.id, 'home', headline.id)}>
@@ -469,5 +476,59 @@ function SeasonHonors() {
         </details>
       )}
     </Card>
+  );
+}
+
+/** Offers to run another team: after being fired (pick one), or interest after a great season. */
+function JobOffers() {
+  const { save, update } = useCareer();
+  const offers = save.jobOffers ?? [];
+  if (!offers.length || save.offseason) return null;
+  const fired = !!save.career.fired;
+  const conf = financeView(save).confidence;
+  return (
+    <section id="job-offers" className={`card job-offers ${fired ? 'fired' : ''}`}>
+      <header className="card-head">
+        <h2>{fired ? 'You have been fired' : 'Job interest'}</h2>
+      </header>
+      <p className="small">
+        {fired
+          ? `The owner lost faith (confidence ${Math.round(conf)}/100). These teams want you to run their club. Pick one to keep your career going.`
+          : 'Another club wants to hire you. Take the job before the offseason starts, or stay put.'}
+      </p>
+      <ul className="job-list">
+        {offers.map((o) => {
+          const t = save.league.teams.find((x) => x.id === o.teamId);
+          if (!t) return null;
+          const exp = ownerExpectation(save.league, t.id);
+          const roster = rosterOf(save.league, t.id).filter((p) => p.contract?.kind !== 'two-way');
+          const star = [...roster].sort((a, b) => playerOverall(b) - playerOverall(a))[0];
+          return (
+            <li key={o.teamId}>
+              <TeamBadge team={t} size={40} />
+              <span>
+                <strong>
+                  {t.city} {t.name}
+                </strong>
+                <br />
+                <span className="muted small">
+                  Rating {teamRating(save.league, t.id)} · {t.market} market{star ? ` · best player ${star.firstName} ${star.lastName} (${displayRating(playerOverall(star))})` : ''}
+                </span>
+                <br />
+                <span className="small">Goal: {exp.goal}</span>
+              </span>
+              <button type="button" className="btn btn-primary btn-sm" onClick={() => update((s) => acceptJob(s, o.teamId))}>
+                Take the job
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      {!fired && (
+        <button type="button" className="btn btn-sm" onClick={() => update((s) => declineOffers(s))}>
+          Stay with my team
+        </button>
+      )}
+    </section>
   );
 }

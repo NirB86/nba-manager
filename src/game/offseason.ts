@@ -30,6 +30,7 @@ import {
 import type { InboxMessage, SaveGame } from '../storage/saves';
 import { MLE_SHARE } from './contracts';
 import { induct, recordPlayerSeasons } from './history';
+import { rollFinances } from './finance';
 
 export type OffseasonStage = 'draft' | 'free-agency' | 'camp';
 
@@ -64,7 +65,7 @@ const msg = (save: SaveGame, id: string, from: string, subject: string, body: st
 
 /** After the Finals: build the draft order and class. */
 export function startOffseason(original: SaveGame, rng = new Rng(newSeed())): SaveGame {
-  if (original.season.phase !== 'done' || original.offseason) return original;
+  if (original.season.phase !== 'done' || original.offseason || original.career.fired) return original;
   const save = structuredClone(original);
   const { league, season } = save;
   // The season just played goes into every player's career record, with the team he finished on.
@@ -290,6 +291,7 @@ export function startNewSeason(original: SaveGame, rng = new Rng(newSeed())): Sa
   save.history = [...(save.history ?? []), { season: year - 1, wins, losses: myRow.length - wins, champion: champion ? teamName(champion) : null }];
   save.season = newSeason(league, rng);
   save.offseason = undefined;
+  rollFinances(save);
 
   const mine = rosterOf(league, me);
   const risers = mine
