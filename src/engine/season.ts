@@ -58,6 +58,8 @@ export interface SeasonState {
   offers?: { id: string; fromTeam: string; deal: MultiTrade; day: number; expiresDay: number; status: 'open' | 'accepted' | 'declined' | 'expired' }[];
   /** Latest rumors and AI-to-AI trades for the league wire, newest first. */
   rumors?: string[];
+  /** Current injuries by player id. */
+  injuries?: Record<string, Injury>;
 }
 
 export interface Highlight {
@@ -69,6 +71,70 @@ export interface Highlight {
   reb: number;
   ast: number;
   won: boolean;
+}
+
+export interface Injury {
+  type: string;
+  /** Team games still to miss. */
+  gamesLeft: number;
+  /** Games the injury was expected to cost when it happened. */
+  total: number;
+  /** Game day it happened. */
+  day: number;
+}
+
+const INJURY_TYPES: [string, number, number, number][] = [
+  // name, weight, min games, max games
+  ['Sprained ankle', 30, 1, 6],
+  ['Sore knee', 14, 1, 4],
+  ['Back spasms', 10, 1, 5],
+  ['Hamstring strain', 12, 3, 12],
+  ['Bruised hip', 8, 1, 3],
+  ['Concussion', 5, 2, 7],
+  ['Calf strain', 8, 4, 14],
+  ['Broken hand', 4, 15, 30],
+  ['High ankle sprain', 4, 10, 25],
+  ['Torn meniscus', 3, 20, 45],
+  ['Torn ACL', 1, 82, 82],
+  ['Torn Achilles', 1, 82, 82],
+];
+
+/** A player's chance of getting hurt in one game, from minutes played and how injury-prone he is. */
+function injuryChance(league: LeagueFile, playerId: string, sec: number): number {
+  const p = league.players.find((x) => x.id === playerId);
+  if (!p || sec <= 0) return 0;
+  const prone = 0.45 + (p.personality.injuryProneness / 20) * 1.3;
+  const durability = 1.25 - p.attributes.durability * 0.025;
+  return 0.021 * prone * durability * Math.min(1.5, sec / (30 * 60));
+}
+
+/**
+ * After a game: injured players on both teams heal by one game, and players
+ * who played may get hurt. `medical(teamId)` is the team's medical staff
+ * rating (1-20); a better staff gets players back sooner.
+ */
+export function updateInjuries(league: LeagueFile, season: SeasonState, result: GameResult, rng: Rng, medical: (teamId: string) => number = () => 10): Injury[] {
+  const injuries = (season.injuries ??= {});
+  const teams = new Set([result.home.teamId, result.away.teamId]);
+  for (const [id, inj] of Object.entries(injuries)) {
+    const p = league.players.find((x) => x.id === id);
+    if (!p || !p.teamId || !teams.has(p.teamId)) continue;
+    inj.gamesLeft--;
+    if (inj.gamesLeft <= 0) delete injuries[id];
+  }
+  const fresh: Injury[] = [];
+  for (const side of [result.home, result.away]) {
+    for (const l of side.lines) {
+      if (injuries[l.playerId] || !rng.chance(injuryChance(league, l.playerId, l.sec))) continue;
+      const [type, , lo, hi] = rng.weighted(INJURY_TYPES.map((t) => [t, t[1]] as const));
+      const staff = 1.15 - medical(side.teamId) * 0.015;
+      const games = Math.max(1, Math.round(rng.int(lo, hi) * (hi >= 82 ? 1 : staff)));
+      const injury = { type, gamesLeft: games, total: games, day: season.day };
+      injuries[l.playerId] = injury;
+      fresh.push({ ...injury, type: `${l.playerId}|${type}` });
+    }
+  }
+  return fresh;
 }
 
 function recordHighlights(season: SeasonState, day: number, result: GameResult) {
@@ -254,8 +320,15 @@ function addStats(table: Record<string, StatTotals>, result: GameResult) {
   }
 }
 
-function playGame(league: LeagueFile, rng: Rng, g: ScheduledGame, log?: PlayEvent[], played?: GameResult): GameResult {
-  const roster = (teamId: string) => league.players.filter((p) => p.teamId === teamId);
+/** Players available tonight: injured players sit, unless a team would have fewer than eight. */
+export function availablePlayers(league: LeagueFile, season: SeasonState, teamId: string) {
+  const all = league.players.filter((p) => p.teamId === teamId);
+  const healthy = all.filter((p) => !season.injuries?.[p.id]);
+  return healthy.length >= 8 ? healthy : all;
+}
+
+function playGame(league: LeagueFile, rng: Rng, g: ScheduledGame, log?: PlayEvent[], played?: GameResult, season?: SeasonState): GameResult {
+  const roster = (teamId: string) => (season ? availablePlayers(league, season, teamId) : league.players.filter((p) => p.teamId === teamId));
   const result = played ?? simulateGame(rng, { teamId: g.home, players: roster(g.home) }, { teamId: g.away, players: roster(g.away) }, log);
   g.hs = result.home.score;
   g.as = result.away.score;
@@ -266,6 +339,8 @@ function playGame(league: LeagueFile, rng: Rng, g: ScheduledGame, log?: PlayEven
 export interface DayReport {
   played: { game: ScheduledGame; result: GameResult; log?: PlayEvent[] }[];
   phaseChanged: boolean;
+  /** New injuries today: player id and the injury. */
+  injured: { playerId: string; injury: Injury }[];
 }
 
 /**
@@ -277,15 +352,23 @@ export interface DayReport {
  * game id. They are recorded instead of being simulated.
  */
 export function simulateDay(league: LeagueFile, season: SeasonState, rng: Rng, keepBox: (g: ScheduledGame) => boolean, logFor?: (g: ScheduledGame) => boolean, played?: Record<string, GameResult>): DayReport {
-  const report: DayReport = { played: [], phaseChanged: false };
+  const report: DayReport = { played: [], phaseChanged: false, injured: [] };
+  const medical = (teamId: string) => league.staff.find((m) => m.teamId === teamId && m.role === 'MED')?.ratings.medical ?? 10;
+  const injuries = (result: GameResult) => {
+    for (const x of updateInjuries(league, season, result, rng, medical)) {
+      const [playerId, type] = x.type.split('|') as [string, string];
+      report.injured.push({ playerId, injury: { ...x, type } });
+    }
+  };
   if (season.phase === 'done') return report;
 
   if (season.phase === 'regular') {
     const today = season.games.filter((g) => g.day === season.day && g.hs === undefined);
     for (const g of today) {
       const log = logFor?.(g) ? [] : undefined;
-      const result = playGame(league, rng, g, log, played?.[g.id]);
+      const result = playGame(league, rng, g, log, played?.[g.id], season);
       addStats(season.stats.regular, result);
+      injuries(result);
       recordHighlights(season, season.day, result);
       if (keepBox(g)) season.boxScores[g.id] = result;
       report.played.push({ game: g, result, log });
@@ -312,8 +395,9 @@ export function simulateDay(league: LeagueFile, season: SeasonState, rng: Rng, k
       away: topHome ? s.bottom.teamId : s.top.teamId,
     };
     const log = logFor?.(g) ? [] : undefined;
-    const result = playGame(league, rng, g, log, played?.[g.id]);
+    const result = playGame(league, rng, g, log, played?.[g.id], season);
     addStats(season.stats.playoffs, result);
+    injuries(result);
     recordHighlights(season, season.day, result);
     if (keepBox(g)) season.boxScores[g.id] = result;
     s.games.push(g);

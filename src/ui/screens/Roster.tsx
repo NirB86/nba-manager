@@ -4,7 +4,7 @@ import { morale, MORALE_LABEL } from '../../game/morale';
 import { potentialRange } from '../../game/scouting';
 import type { SaveGame } from '../../storage/saves';
 import { useCareer } from '../career-context';
-import { MoodPill, Ovr, Pill, PlayerPhoto, Segmented } from '../components';
+import { InjuryPill, MoodPill, Ovr, Pill, PlayerPhoto, Segmented } from '../components';
 import { f1, pct, perGame } from './Season';
 import { height, money, seasonLabel } from '../format';
 import { href } from '../router';
@@ -127,6 +127,7 @@ export function RosterTable({ save, players, showMood = false }: { save: SaveGam
                     </span>
                     {fullName(p)}
                   </a>
+                  <InjuryPill injury={save.season.injuries?.[p.id]} />
                   {p.contract?.kind === 'rookie' && <Pill>Rookie deal</Pill>}
                   {p.contract?.kind === 'two-way' && <Pill>Two-way</Pill>}
                 </td>

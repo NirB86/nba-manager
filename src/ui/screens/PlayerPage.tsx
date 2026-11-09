@@ -87,6 +87,12 @@ export function PlayerPage({ playerId }: { playerId: string }) {
         </div>
       </section>
 
+      {save.season.injuries?.[p.id] && (
+        <div className="notice injury-notice">
+          <strong>Injured: {save.season.injuries[p.id]!.type}.</strong>{' '}
+          {save.season.injuries[p.id]!.gamesLeft >= 60 ? 'Out for the season.' : `Expected back in about ${save.season.injuries[p.id]!.gamesLeft} game${save.season.injuries[p.id]!.gamesLeft === 1 ? '' : 's'}.`}
+        </div>
+      )}
       <div className="row-actions player-actions">
         {team && !mine && (
           <a className="btn btn-primary" href={href('c', save.id, 'trade', team.id, p.id)}>

@@ -19,7 +19,7 @@ const isCutout = (photo?: ImageCredit) => photo?.source === 'NBA.com';
 
 /** The team's best player, for the matchup board. */
 function starOf(save: SaveGame, teamId: string): Player | undefined {
-  return rosterOf(save.league, teamId).sort((a, b) => playerOverall(b) - playerOverall(a))[0];
+  return rosterOf(save.league, teamId).filter((p) => !save.season.injuries?.[p.id]).sort((a, b) => playerOverall(b) - playerOverall(a))[0];
 }
 
 const ROUND = ['Play-in', 'First round', 'Conference semis', 'Conference finals', 'NBA Finals'];
@@ -282,7 +282,9 @@ export function Home({ messageId }: { messageId?: string }) {
   })();
 
   const headline = save.inbox.find((m) => !m.read) ?? save.inbox[0];
-  const five = roster.slice(0, 5);
+  // Starting five: the best healthy players.
+  const five = roster.filter((p) => !save.season.injuries?.[p.id]).slice(0, 5);
+  const hurt = roster.filter((p) => save.season.injuries?.[p.id]);
 
   return (
     <>
@@ -336,6 +338,17 @@ export function Home({ messageId }: { messageId?: string }) {
           Full roster ›
         </a>
       </div>
+      {hurt.length > 0 && (
+        <p className="injury-line">
+          <strong>Injured:</strong>{' '}
+          {hurt.map((p, k) => (
+            <span key={p.id}>
+              {k > 0 && ', '}
+              <a href={href('c', save.id, 'player', p.id)}>{p.lastName}</a> ({save.season.injuries![p.id]!.type.toLowerCase()}, {save.season.injuries![p.id]!.gamesLeft >= 60 ? 'season' : `${save.season.injuries![p.id]!.gamesLeft} g`})
+            </span>
+          ))}
+        </p>
+      )}
       <div className="lineup-cards">
         {five.map((p) => (
           <a key={p.id} className="lineup-card" href={href('c', save.id, 'player', p.id)}>

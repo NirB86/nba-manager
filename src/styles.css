@@ -996,3 +996,8 @@ select.input { appearance: auto; }
 .cloud-setup { display: grid; gap: 8px; padding: 12px 14px; background: #fff; border-left: 6px solid var(--red); box-shadow: var(--shadow); font-size: 14px; }
 .cloud-setup ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
 .cloud-sql { margin: 0; padding: 10px; overflow-x: auto; background: #0b0b0d; color: #e6e8ec; font-size: 12px; line-height: 1.45; white-space: pre; }
+
+/* Injuries */
+.injury-pill { display: inline-flex; align-items: center; gap: 4px; margin-left: 6px; padding: 1px 6px; background: var(--red); color: #fff; font-family: var(--label); font-weight: 800; font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; white-space: nowrap; }
+.injury-notice { border-left-color: var(--red) !important; margin-bottom: 12px; }
+.injury-line { margin: -4px 0 10px; font-size: 14px; }

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { LiveGame, Rng, newSeed, type GameResult, type LiveState, type PlayEvent, type Player, type Tactics, type Team } from '../../engine';
+import { LiveGame, Rng, availablePlayers, newSeed, type GameResult, type LiveState, type PlayEvent, type Player, type Tactics, type Team } from '../../engine';
 import type { SaveGame } from '../../storage/saves';
 import { photoSrc, TeamBadge } from '../components';
 
@@ -217,7 +217,7 @@ export function GameCast({ save, homeId, awayId, mode, onFinish }: { save: SaveG
   // The game itself: the same rosters the season uses.
   const game = useRef<LiveGame | null>(null);
   if (!game.current) {
-    const roster = (id: string) => league.players.filter((p) => p.teamId === id);
+    const roster = (id: string) => availablePlayers(league, save.season, id);
     game.current = new LiveGame(new Rng(newSeed()), { teamId: homeId, players: roster(homeId) }, { teamId: awayId, players: roster(awayId) });
   }
   const live = game.current;

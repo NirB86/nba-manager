@@ -33,6 +33,17 @@ export function MoodPill({ level, label }: { level: 'thrilled' | 'happy' | 'cont
   );
 }
 
+/** "Out 6 games" badge for an injured player. */
+export function InjuryPill({ injury }: { injury?: { type: string; gamesLeft: number } }) {
+  if (!injury) return null;
+  const text = injury.gamesLeft >= 60 ? 'Out for season' : `Out ${injury.gamesLeft} g`;
+  return (
+    <span className="injury-pill" title={`${injury.type}: ${text}`}>
+      <span aria-hidden="true">✚</span> {text}
+    </span>
+  );
+}
+
 export function TeamBadge({ team, size = 40 }: { team: Pick<Team, 'abbrev' | 'colors'> & { logo?: ImageCredit }; size?: number }) {
   const [broken, setBroken] = useState(false);
   if (team.logo && !broken) {

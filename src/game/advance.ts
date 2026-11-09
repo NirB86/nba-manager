@@ -1,7 +1,7 @@
 // Advancing time in a career: plays days of the season and writes news to
 // the inbox. Runs in small chunks so the screen stays responsive.
 
-import { Rng, fullName, newSeed, simulateDay, standings, teamName, type GameResult, type PlayEvent, type ScheduledGame, type SeasonState, type Series } from '../engine';
+import { Rng, fullName, newSeed, playerOverall, simulateDay, standings, teamName, type DayReport, type GameResult, type PlayEvent, type ScheduledGame, type SeasonState, type Series } from '../engine';
 import type { InboxMessage, SaveGame } from '../storage/saves';
 import { weeklyMarket } from './market';
 
@@ -41,6 +41,22 @@ function message(save: SaveGame, id: string, from: string, subject: string, body
   return { id: `${id}-${save.season.year}`, from, subject, body, date: dateLabel(save.season), read: false };
 }
 
+/** Injury news: your players to the inbox, stars elsewhere to the league wire. */
+function injuryNews(save: SaveGame, report: DayReport) {
+  const me = save.career.teamId;
+  for (const { playerId, injury } of report.injured) {
+    const p = save.league.players.find((x) => x.id === playerId);
+    if (!p) continue;
+    const out = injury.gamesLeft >= 82 ? 'out for the season' : `out about ${injury.gamesLeft} game${injury.gamesLeft === 1 ? '' : 's'}`;
+    if (p.teamId === me) {
+      save.inbox.unshift({ id: `injury-${p.id}-${save.season.day}`, from: 'Medical staff', subject: `${fullName(p)}: ${injury.type.toLowerCase()}, ${out}`, body: `${fullName(p)} picked up a ${injury.type.toLowerCase()} and will be ${out}. He is off the game roster until he is healthy; the rotation adjusts on its own.`, date: dateLabel(save.season), read: false });
+    } else if (playerOverall(p) >= 72 || injury.gamesLeft >= 15) {
+      const team = save.league.teams.find((t) => t.id === p.teamId);
+      save.season.rumors = [`Injury: ${team?.name ?? ''} ${p.lastName} ${out}`, ...(save.season.rumors ?? [])].slice(0, 6);
+    }
+  }
+}
+
 export function dateLabel(season: SeasonState): string {
   if (season.phase === 'regular') return `Regular season, day ${season.day + 1}`;
   if (season.phase === 'playoffs') return 'Playoffs';
@@ -68,6 +84,7 @@ export async function advanceToGameDay(original: SaveGame): Promise<SaveGame> {
     const seriesBefore = season.series.length;
     const dayBefore = season.day;
     const report = simulateDay(league, season, rng, (g) => g.home === me || g.away === me);
+    injuryNews(save, report);
     if (season.phase === 'regular' && season.day !== dayBefore && season.day % 7 === 0) weeklyMarket(save, rng);
     if (report.phaseChanged) news(save, phaseBefore, seriesBefore);
     if (guard % 6 === 5) await new Promise((r) => setTimeout(r, 0));
@@ -85,6 +102,7 @@ export async function finishLiveGame(original: SaveGame, gameId: string, result:
   const seriesBefore = season.series.length;
   const dayBefore = season.day;
   const report = simulateDay(league, season, rng, (g) => g.home === me || g.away === me || g.id.startsWith('finals'), undefined, { [gameId]: result });
+  injuryNews(save, report);
   if (season.phase === 'regular' && season.day !== dayBefore && season.day % 7 === 0) weeklyMarket(save, rng);
   if (report.phaseChanged) news(save, phaseBefore, seriesBefore);
   return save;
@@ -120,6 +138,7 @@ export async function advance(original: SaveGame, target: AdvanceTarget, onProgr
     const seriesBefore = season.series.length;
     const dayBefore = season.day;
     const report = simulateDay(league, season, rng, (g) => isMine(g) || g.id.startsWith('finals'), onPlayByPlay ? isMine : undefined);
+    injuryNews(save, report);
     for (const p of report.played) if (p.log && onPlayByPlay) onPlayByPlay(p.game.id, p.log);
     steps++;
     // Once a game week: offers, AI trades and rumors.
