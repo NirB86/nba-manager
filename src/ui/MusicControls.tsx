@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { addOwn, next, pause, play, playTrack, removeOwn, setVolume, useMusic } from './music';
+import { ALBUM, addOwn, next, pause, play, playTrack, removeOwn, setVolume, useMusic } from './music';
 import { DEFAULT_PLAYLIST, embedUrl, setSpotify, useSpotify } from './spotify';
 import { Card } from './components';
 
@@ -29,7 +29,17 @@ export function MusicSettings() {
   const file = useRef<HTMLInputElement>(null);
   return (
     <Card title="Music" action={<MusicButton />}>
-      <p className="muted small">The game makes its own hip hop beats (lo-fi and boom bap, with drums, bass and keys). Add your own songs from this device and they play first; they stay on this device. Tap a track to play it.</p>
+      <p className="muted small">
+        Soundtrack:{' '}
+        <a href={ALBUM.page} target="_blank" rel="noreferrer">
+          {ALBUM.title}
+        </a>{' '}
+        by {ALBUM.artist}, licensed{' '}
+        <a href={ALBUM.licenseUrl} target="_blank" rel="noreferrer">
+          {ALBUM.license}
+        </a>
+        . Add your own songs from this device and they play first; they stay on this device. Tap a track to play it.
+      </p>
       <div className="music-row">
         <label className="music-volume">
           <span className="label">Volume</span>
@@ -91,7 +101,7 @@ function SpotifySettings() {
     <div className="spotify-settings">
       <h3>Real hip hop on Spotify</h3>
       <p className="muted small">
-        Plays a Spotify playlist through Spotify's own player, docked in the corner on every screen. Logged in to Spotify in this browser you hear full songs; otherwise Spotify plays 30-second previews. Turning it on pauses the game's beats.
+        Plays a Spotify playlist through Spotify's own player, docked in the corner on every screen. Logged in to Spotify in this browser you hear full songs; otherwise Spotify plays 30-second previews. Turning it on pauses the game's soundtrack.
       </p>
       <label className="spotify-link">
         <span className="label">Playlist link</span>

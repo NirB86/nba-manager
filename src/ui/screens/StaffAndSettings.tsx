@@ -7,6 +7,7 @@ import { attrTone, money, seasonLabel } from '../format';
 import { href } from '../router';
 import { Icon, PageHeader } from '../Shell';
 import { MusicSettings } from '../MusicControls';
+import { ALBUM } from '../music';
 import { enableNotify, notifySupported, notifyWanted } from '../notify';
 
 const ROLE_LABEL: Record<StaffRole, string> = {
@@ -413,6 +414,17 @@ export function Credits() {
       <p className="muted small" style={{ marginBottom: 12 }}>
         Photos and logos come from Wikimedia Commons and Creative Commons searches. Each is shown under its license; tap a license to see the original. Photos are framed around the face for display; the original files are unchanged.
         {nc ? ` ${nc} photos are licensed for non-commercial use only.` : ''}
+      </p>
+      <p className="small" style={{ marginBottom: 12 }}>
+        <strong>Music:</strong>{' '}
+        <a href={ALBUM.page} target="_blank" rel="noreferrer">
+          {ALBUM.title}
+        </a>{' '}
+        by {ALBUM.artist},{' '}
+        <a href={ALBUM.licenseUrl} target="_blank" rel="noreferrer">
+          {ALBUM.license}
+        </a>{' '}
+        (unchanged, re-encoded for the web).
       </p>
       <div className="table-wrap">
         <table className="table">

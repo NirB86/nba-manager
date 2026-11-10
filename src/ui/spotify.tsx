@@ -42,7 +42,7 @@ export function useSpotify(): SpotifyPrefs {
 }
 
 export function setSpotify(patch: Partial<SpotifyPrefs>) {
-  // One music source at a time: Spotify pauses the game's own beats.
+  // One music source at a time: Spotify pauses the game's own soundtrack.
   if (patch.on) pause();
   save({ ...prefs, ...patch });
 }

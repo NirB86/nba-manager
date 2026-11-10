@@ -1,10 +1,10 @@
-// Background music: a shuffled playlist of original hip hop beats the game
-// synthesises itself (beats.ts), plus any tracks the player adds from their
-// own device (kept in this device's storage, never uploaded).
+// Background music: a shuffled playlist of the hip hop album the game ships
+// with (Joint C Beat Laboratory, "Tales from Underground vol.1", CC BY-NC 4.0),
+// plus any tracks the player adds from their own device (kept in this device's
+// storage, never uploaded).
 
 import { useSyncExternalStore } from 'react';
 import { kvGet, kvSet } from '../storage/saves';
-import { BeatPlayer, PRESETS, type BeatPreset } from './beats';
 
 export interface Track {
   id: string;
@@ -14,12 +14,39 @@ export interface Track {
   page?: string;
   src: string;
   own?: boolean;
-  /** A beat the game synthesises live, instead of an audio file. */
-  beat?: BeatPreset;
 }
 
-/** Original beats made by the game itself (see beats.ts): no files, no licences. */
-export const BUILT_IN: Track[] = PRESETS.map((p) => ({ id: p.id, title: p.title, artist: `NBA Manager beats · ${p.bpm} BPM`, src: '', beat: p }));
+export const ALBUM = {
+  title: 'Tales from Underground vol.1',
+  artist: 'Joint C Beat Laboratory',
+  license: 'CC BY-NC 4.0',
+  licenseUrl: 'https://creativecommons.org/licenses/by-nc/4.0/',
+  page: 'https://freemusicarchive.org/music/jcbl/tales-from-underground-vol1',
+};
+
+const ALBUM_TRACKS: [string, string][] = [
+  ['blooming-poison', 'Blooming Poison'],
+  ['brain-war', 'Brain War'],
+  ['delete', 'Delete'],
+  ['pinocchio', 'Pinocchio'],
+  ['mars-is-dangerous', 'Mars Is Dangerous'],
+  ['bad-trip', 'Bad Trip'],
+  ['nerves', 'Nerves'],
+  ['back-in-to-the-toxic', 'Back in to the Toxic'],
+  ['endorphin-release', 'Endorphin Release'],
+  ['resident-evil', 'Resident Evil'],
+  ['war-with-yourself', 'War with Yourself'],
+];
+
+/** The game's soundtrack: files in public/music, credited with their license. */
+export const BUILT_IN: Track[] = ALBUM_TRACKS.map(([file, title]) => ({
+  id: `jcbl-${file}`,
+  title,
+  artist: ALBUM.artist,
+  license: ALBUM.license,
+  page: `${ALBUM.page}/${file}`,
+  src: `${import.meta.env.BASE_URL}music/tales-from-underground/${file}.mp3`,
+}));
 
 interface OwnTrack {
   id: string;
@@ -41,9 +68,9 @@ interface MusicState {
 function loadPrefs(): { enabled: boolean; volume: number } {
   try {
     const v = JSON.parse(localStorage.getItem(PREFS_KEY) ?? '{}');
-    return { enabled: v.enabled ?? false, volume: typeof v.volume === 'number' ? v.volume : 0.5 };
+    return { enabled: v.enabled ?? true, volume: typeof v.volume === 'number' ? v.volume : 0.4 };
   } catch {
-    return { enabled: false, volume: 0.5 };
+    return { enabled: true, volume: 0.4 };
   }
 }
 
@@ -61,22 +88,16 @@ const set = (patch: Partial<MusicState>) => {
 };
 
 let audio: HTMLAudioElement | null = null;
-let beat: BeatPlayer | null = null;
-let beatTimer: number | null = null;
 let queue: Track[] = [];
 let ownUrls: string[] = [];
-/** How long one beat plays before the next track (seconds). */
-const BEAT_SECONDS = 150;
 
 function player(): HTMLAudioElement {
   if (!audio) {
     audio = new Audio();
-    audio.preload = 'auto';
+    audio.preload = 'none';
     audio.addEventListener('ended', () => void next());
     audio.addEventListener('error', () => void next());
-    audio.addEventListener('pause', () => {
-      if (!beat) set({ playing: false });
-    });
+    audio.addEventListener('pause', () => set({ playing: false }));
     audio.addEventListener('play', () => set({ playing: true }));
   }
   audio.volume = state.volume;
@@ -86,33 +107,14 @@ function player(): HTMLAudioElement {
 const all = () => [...state.own, ...BUILT_IN];
 
 function shuffled(): Track[] {
-  // Your own tracks first, then the game's beats, each group shuffled.
+  // Your own tracks first, then the album, each group shuffled.
   const mix = (xs: Track[]) => xs.map((t) => ({ t, r: Math.random() })).sort((a, b) => a.r - b.r).map((x) => x.t);
   return [...mix(state.own), ...mix(BUILT_IN)];
 }
 
-function stopBeat() {
-  if (beatTimer !== null) window.clearTimeout(beatTimer);
-  beatTimer = null;
-  beat?.stop();
-  beat = null;
-}
-
 async function startTrack(track: Track) {
-  stopBeat();
   audio?.pause();
   set({ current: track });
-  if (track.beat) {
-    beat = new BeatPlayer(track.beat, state.volume);
-    try {
-      await beat.start();
-      set({ playing: true });
-      beatTimer = window.setTimeout(() => void next(), BEAT_SECONDS * 1000);
-    } catch {
-      set({ playing: false });
-    }
-    return;
-  }
   const a = player();
   a.src = track.src;
   try {
@@ -139,7 +141,7 @@ export async function playTrack(id: string): Promise<void> {
 export async function play(): Promise<void> {
   set({ enabled: true });
   const cur = state.current;
-  if (cur && !cur.beat && audio?.src && audio.paused) {
+  if (cur && audio?.src && audio.paused) {
     try {
       await audio.play();
       return;
@@ -147,23 +149,17 @@ export async function play(): Promise<void> {
       // fall through to a fresh track
     }
   }
-  if (cur?.beat) {
-    await startTrack(cur);
-    return;
-  }
   await next();
 }
 
 export function pause() {
   set({ enabled: false, playing: false });
-  stopBeat();
   audio?.pause();
 }
 
 export function setVolume(v: number) {
   set({ volume: v });
   if (audio) audio.volume = v;
-  beat?.setVolume(v);
 }
 
 async function loadOwn() {
