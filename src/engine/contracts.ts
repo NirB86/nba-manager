@@ -102,6 +102,11 @@ export function projectedCba(cba: CbaSettings, yearsAhead: number): CbaSettings 
 
 export type CapStatus = 'under-cap' | 'over-cap' | 'taxpayer' | 'first-apron' | 'second-apron';
 
+/** Minimum team payroll: 90% of the cap. Teams below it pay the shortfall to their players at season's end. */
+export function salaryFloor(cba: CbaSettings): number {
+  return Math.round(cba.salaryCap * 0.9);
+}
+
 export function capStatus(cba: CbaSettings, payroll: number): CapStatus {
   if (payroll >= cba.secondApron) return 'second-apron';
   if (payroll >= cba.firstApron) return 'first-apron';

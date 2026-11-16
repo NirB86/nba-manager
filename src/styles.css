@@ -1117,3 +1117,11 @@ tr.focus-row td:first-child { box-shadow: inset 3px 0 0 var(--team); }
 .notify-row { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
 
 .short-roster { display: block; border-left-color: var(--bad) !important; margin: 0 0 12px; color: inherit; text-decoration: none; }
+
+/* Offseason: options and offer sheets */
+.sheet-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; }
+.sheet-list li { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 8px; background: var(--surface-2); }
+.sheet-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.sheet-card { border-top: 4px solid var(--warn); }
+.rfa-tag { margin-left: 6px; font-size: 10px; }
+@media (max-width: 480px) { .sheet-list li { grid-template-columns: auto 1fr; } .sheet-list li > :last-child { grid-column: 1 / -1; justify-content: flex-start; } }

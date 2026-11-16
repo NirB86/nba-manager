@@ -43,16 +43,23 @@ export function ContractOffer({ player, onDone }: { player: Player; onDone: () =
       setResult({ ok: true, text: `${fullName(player)} signed: ${describe(offer)}.` });
       setCounter(null);
       onDone();
+    } else if ('matchedBy' in r) {
+      setCounter(null);
+      setResult({ ok: false, text: `${player.lastName} agreed, but he is a restricted free agent: the ${r.matchedBy} matched the offer and keep him.` });
     } else {
       setCounter(r.counter);
       setResult({ ok: false, text: `${player.lastName} turned it down. His agent sent a counter offer.` });
     }
   };
   const takeCounter = (c: Offer) => {
-    update((s) => acceptCounter(s, player.id, c));
-    setResult({ ok: true, text: `${fullName(player)} signed: ${describe(c)}.` });
+    const next = acceptCounter(save, player.id, c);
+    update(() => next);
     setCounter(null);
-    onDone();
+    const now = next.league.players.find((x) => x.id === player.id);
+    if (now?.teamId === save.career.teamId) {
+      setResult({ ok: true, text: `${fullName(player)} signed: ${describe(c)}.` });
+      onDone();
+    } else setResult({ ok: false, text: `${player.lastName} is a restricted free agent: his team matched the offer and keeps him.` });
   };
 
   return (

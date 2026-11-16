@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { displayRating, fullName, playerAge, playerOverall, marketSalary, type Player } from '../../engine';
+import { displayRating, fullName, marketSalary, playerAge, playerOverall, type Player } from '../../engine';
 import { fitReport } from '../../game/fit';
-import { FA_DAYS, draftDone, draftPlayer, freeAgencyDay, simDraft, startFreeAgency, startNewSeason, startOffseason } from '../../game/offseason';
+import { FA_DAYS, askToday, declineOfferSheet, draftDone, draftPlayer, freeAgencyDay, matchOfferSheet, pendingOptions, setOptionChoice, simDraft, startFreeAgency, startNewSeason, startOffseason } from '../../game/offseason';
 import { potentialRange } from '../../game/scouting';
 import { useCareer } from '../career-context';
 import { Card, DraftMark, Ovr, PlayerPhoto, TeamBadge } from '../components';
@@ -63,6 +63,7 @@ export function Offseason() {
           </li>
         ))}
       </ol>
+      {stage === 'draft' && <OptionsCard />}
       {stage === 'draft' ? <DraftRoom busy={busy} act={act} /> : <FreeAgency busy={busy} act={act} />}
     </>
   );
@@ -194,7 +195,9 @@ function FreeAgency({ busy, act }: { busy: boolean; act: (fn: () => void) => voi
     .sort((a, b) => playerOverall(b) - playerOverall(a))
     .slice(0, 40);
   const roster = save.league.players.filter((p) => p.teamId === me && p.contract?.kind !== 'two-way').length;
-  const ask = (p: Player) => marketSalary(save.league.settings, playerOverall(p), playerAge(p, year), p.experience);
+  // What he asks today: asks come down the longer a player waits.
+  const ask = (p: Player) => askToday(save, p);
+  const sheets = o.offerSheets ?? [];
 
   const row = (p: Player) => {
     const fit = fitReport(save, p);
@@ -208,7 +211,10 @@ function FreeAgency({ busy, act }: { busy: boolean; act: (fn: () => void) => voi
             {fullName(p)}
           </a>
         </td>
-        <td>{p.position}</td>
+        <td>
+          {p.position}
+          {o.rfa?.[p.id] && <span className="pill pill-warn rfa-tag" title="Restricted: his team can match offers">RFA</span>}
+        </td>
         <td className="num">{playerAge(p, year)}</td>
         <td className="num"><Ovr value={playerOverall(p)} /></td>
         <td className="num hide-sm">{money(ask(p))}</td>
@@ -251,6 +257,38 @@ function FreeAgency({ busy, act }: { busy: boolean; act: (fn: () => void) => voi
           </button>
         </div>
       </section>
+      {sheets.length > 0 && (
+        <Card title="Offer sheets to answer" className="sheet-card">
+          <p className="muted small">Your restricted free agents signed offer sheets with other teams. Match to keep them on the same terms (Bird rights let you go over the cap), or let them go. Unanswered sheets are signed tomorrow.</p>
+          <ul className="sheet-list">
+            {sheets.map((sh) => {
+              const p = save.league.players.find((x) => x.id === sh.playerId);
+              const t = save.league.teams.find((x) => x.id === sh.teamId);
+              if (!p || !t) return null;
+              return (
+                <li key={sh.playerId}>
+                  <TeamBadge team={t} size={30} />
+                  <span>
+                    <strong>{fullName(p)}</strong> <span className="muted small">{p.position} · OVR {displayRating(playerOverall(p))}</span>
+                    <br />
+                    <span className="small">
+                      {t.name}: {sh.years} yrs at {money(sh.salary)} a season
+                    </span>
+                  </span>
+                  <span className="sheet-actions">
+                    <button type="button" className="btn btn-sm btn-primary" onClick={() => update((s) => matchOfferSheet(s, sh.playerId))}>
+                      Match
+                    </button>
+                    <button type="button" className="btn btn-sm" onClick={() => update((s) => declineOfferSheet(s, sh.playerId))}>
+                      Let him go
+                    </button>
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </Card>
+      )}
       {mine.length > 0 && (
         <Card title="Your free agents (Bird rights)">
           <p className="muted small">You can go over the cap to re-sign these players.</p>
@@ -271,5 +309,49 @@ function FreeAgency({ busy, act }: { busy: boolean; act: (fn: () => void) => voi
         </div>
       </Card>
     </>
+  );
+}
+
+/** Player and team options on your roster for next season. Team options are your call. */
+function OptionsCard() {
+  const { save, update } = useCareer();
+  const opts = pendingOptions(save);
+  if (!opts.length) return null;
+  const year = save.offseason!.draftYear;
+  const choices = save.offseason!.optionChoices ?? {};
+  return (
+    <Card title={`Contract options for ${seasonLabel(year)}`}>
+      <p className="muted small">Decided when free agency opens. Players decide their own options (they opt out when they can earn clearly more); team options are yours. Declining makes the player a free agent you can still re-sign with Bird rights.</p>
+      <ul className="sheet-list">
+        {opts.map(({ player: p, type, salary }) => {
+          const worth = marketSalary(save.league.settings, playerOverall(p), playerAge(p, year), p.experience);
+          const choice = choices[p.id];
+          return (
+            <li key={p.id}>
+              <span className="pill pill-neutral">{type === 'team' ? 'TO' : 'PO'}</span>
+              <span>
+                <strong>{fullName(p)}</strong> <span className="muted small">OVR {displayRating(playerOverall(p))}</span>
+                <br />
+                <span className="small">
+                  {money(salary)} option · market value about {money(worth)}
+                </span>
+              </span>
+              {type === 'team' ? (
+                <span className="sheet-actions">
+                  <button type="button" className={`btn btn-sm ${choice === 'exercise' ? 'btn-primary' : ''}`} onClick={() => update((s) => setOptionChoice(s, p.id, 'exercise'))}>
+                    Exercise
+                  </button>
+                  <button type="button" className={`btn btn-sm ${choice === 'decline' ? 'btn-primary' : ''}`} onClick={() => update((s) => setOptionChoice(s, p.id, 'decline'))}>
+                    Decline
+                  </button>
+                </span>
+              ) : (
+                <span className="muted small">{worth > salary * 1.1 ? 'Likely to opt out' : 'Likely to opt in'}</span>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+    </Card>
   );
 }

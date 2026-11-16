@@ -43,7 +43,7 @@ describe('contract offers', () => {
     if (!elig.ok) throw new Error(elig.reason);
     const result = makeOffer(save, p.id, { ...elig.negotiation.ask, salary: elig.negotiation.minSalary }, () => 0.999);
     expect(result.signed).toBe(false);
-    if (result.signed) return;
+    if (result.signed || !('counter' in result)) return;
     const again = negotiation(result.save, p);
     expect(again.ok && again.negotiation.waitUntilNextDay).toBe(true);
     const signed = acceptCounter(result.save, p.id, result.counter);

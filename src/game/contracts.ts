@@ -2,7 +2,7 @@
 // signings of free agents. Each player has an asking price; an offer has a
 // chance of a yes, and a refusal comes with the player's counter offer.
 
-import { Rng, assignJersey, buildContract, capStatus, fullName, marketSalary, maxSalaryShare, playerAge, playerOverall, projectedCba, rosterOf, teamPayroll, teamStrategy, type Contract, type Player } from '../engine';
+import { Rng, assignJersey, playerValue, buildContract, capStatus, fullName, marketSalary, maxSalaryShare, playerAge, playerOverall, projectedCba, rosterOf, teamPayroll, teamStrategy, type Contract, type Player } from '../engine';
 import { endHoldout } from './demands';
 import { addMessage, type SaveGame } from '../storage/saves';
 import { morale } from './morale';
@@ -181,7 +181,34 @@ export function evaluateOffer(save: SaveGame, p: Player, n: Negotiation, offer: 
   return { valid: true, chance, message };
 }
 
-export type OfferResult = { signed: true; save: SaveGame } | { signed: false; save: SaveGame; counter: Offer };
+export type OfferResult =
+  | { signed: true; save: SaveGame }
+  | { signed: false; save: SaveGame; counter: Offer }
+  /** He agreed, but he is another team's restricted free agent and they matched. */
+  | { signed: false; save: SaveGame; matchedBy: string };
+
+/** The team holding a restricted free agent's rights, if it would match this offer (it matches when he is worth the price). */
+function rfaMatcher(save: SaveGame, p: Player, offer: Offer): string | null {
+  const holder = save.offseason?.rfa?.[p.id];
+  if (!holder || holder === save.career.teamId) return null;
+  const worth = playerValue(save.league, p, teamStrategy(save.league, holder)) * save.league.settings.salaryCap * 0.012;
+  return worth >= offer.salary * 0.9 ? holder : null;
+}
+
+/** The holder matches your offer sheet: the player signs with them on your terms. */
+function applyMatch(original: SaveGame, playerId: string, holder: string, offer: Offer): SaveGame {
+  const save = structuredClone(original);
+  const { league } = save;
+  const year = league.meta.season;
+  const p = league.players.find((x) => x.id === playerId)!;
+  p.teamId = holder;
+  p.contract = { years: Array.from({ length: offer.years }, (_, i) => ({ season: year + i, salary: Math.round(offer.salary * 1.05 ** i) })), option: null, kind: 'standard', noTrade: false, signedSeason: year };
+  assignJersey(league, p);
+  delete save.offseason!.rfa![playerId];
+  const t = league.teams.find((x) => x.id === holder);
+  addMessage(save, { id: `matched-${p.id}-${year}`, from: 'Assistant GM', subject: `The ${t?.name} matched our offer for ${fullName(p)}`, body: `${fullName(p)} signed our offer sheet, but he was a restricted free agent and the ${t?.name} matched it. He stays with them.`, date: 'Offseason', read: false });
+  return save;
+}
 
 /** Make the offer. A refusal blocks new offers until the next game day and comes with his counter. */
 export function makeOffer(original: SaveGame, playerId: string, offer: Offer, roll: () => number = Math.random): OfferResult {
@@ -191,7 +218,11 @@ export function makeOffer(original: SaveGame, playerId: string, offer: Offer, ro
   const n = elig.negotiation;
   const v = evaluateOffer(original, p, n, offer);
   if (!v.valid) throw new Error(v.problem);
-  if (roll() <= v.chance) return { signed: true, save: sign(original, playerId, n, offer) };
+  if (roll() <= v.chance) {
+    const matcher = rfaMatcher(original, p, offer);
+    if (matcher) return { signed: false, save: applyMatch(original, playerId, matcher, offer), matchedBy: original.league.teams.find((t) => t.id === matcher)?.name ?? 'his team' };
+    return { signed: true, save: sign(original, playerId, n, offer) };
+  }
   const save = structuredClone(original);
   const day = talkDay(save);
   save.season.contractTalks = [...(save.season.contractTalks ?? []).filter((t) => t.day === day), { playerId, day }];
@@ -213,6 +244,8 @@ export function acceptCounter(save: SaveGame, playerId: string, counter: Offer):
   if (!p) return save;
   const elig = negotiation({ ...save, season: { ...save.season, contractTalks: [] } }, p);
   if (!elig.ok) throw new Error(elig.reason);
+  const matcher = rfaMatcher(save, p, counter);
+  if (matcher) return applyMatch(save, playerId, matcher, counter);
   return sign(save, playerId, elig.negotiation, counter);
 }
 

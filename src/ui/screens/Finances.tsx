@@ -5,6 +5,7 @@ import {
   playerOverall,
   displayRating,
   projectedCba,
+  salaryFloor,
   rosterOf,
   salaryIn,
   teamPayroll,
@@ -35,6 +36,7 @@ function CapMeter({ cba, payroll }: { cba: CbaSettings; payroll: number }) {
   const pct = (v: number) => `${((v - min) / (max - min)) * 100}%`;
   const status = capStatus(cba, payroll);
   const lines = [
+    { key: 'floor', label: 'Salary floor', value: salaryFloor(cba) },
     { key: 'cap', label: 'Salary cap', value: cba.salaryCap },
     { key: 'tax', label: 'Luxury tax', value: cba.luxuryTax },
     { key: 'a1', label: '1st apron', value: cba.firstApron },
@@ -253,6 +255,7 @@ function ClubBooks() {
   const costs: [string, number][] = [
     ['Player salaries', l.payroll],
     ['Luxury tax', l.tax],
+    ['Salary floor shortfall', l.floor ?? 0],
     ['Operations', l.ops ?? 0],
   ];
   return (
@@ -289,7 +292,7 @@ function ClubBooks() {
               </tr>
             </tbody>
           </table>
-          <p className="muted small">The tax bill is assessed on the payroll at the end of the regular season. Losing money and going over the owner's budget cost you confidence.</p>
+          <p className="muted small">The tax bill and the salary floor ({money(salaryFloor(save.league.settings))}, 90% of the cap) are assessed on the payroll at the end of the regular season; a team under the floor pays the difference to its players. Losing money and going over the owner's budget cost you confidence.</p>
         </Card>
         <Card title="Ticket prices">
           <label className="ticket-price">

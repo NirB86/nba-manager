@@ -32,6 +32,7 @@ import {
   type DraftSlot,
   type LeagueFile,
   type Player,
+  salaryFloor,
 } from '../engine';
 import { addMessage, type InboxMessage, type SaveGame } from '../storage/saves';
 import { MLE_SHARE } from './contracts';
@@ -57,6 +58,21 @@ export interface OffseasonState {
   birdRights: Record<string, string>;
   /** Teams that used the mid-level exception this summer. */
   mleUsed: string[];
+  /** Your decisions on team options for next season (undecided: your assistant decides). */
+  optionChoices?: Record<string, 'exercise' | 'decline'>;
+  /** Restricted free agents (former first-round picks): player id to the team that can match offers. */
+  rfa?: Record<string, string>;
+  /** Offer sheets other teams gave your restricted free agents: match them or let him go. */
+  offerSheets?: OfferSheet[];
+}
+
+export interface OfferSheet {
+  playerId: string;
+  teamId: string;
+  salary: number;
+  years: number;
+  /** Free agency day it arrived: unanswered by the next day, he signs it. */
+  day: number;
 }
 
 export const FA_DAYS = 5;
@@ -162,14 +178,22 @@ export function startFreeAgency(original: SaveGame, rng = new Rng(newSeed())): S
   rollOverLeagueYear(league);
   const year = league.meta.season;
 
+  const optionNews = applyOptions(save);
   const expiring = expiringPlayers(league);
   const mineLeft: string[] = [];
   const resigned: string[] = [];
+  const rfa: Record<string, string> = (save.offseason!.rfa = {});
+  save.offseason!.offerSheets = [];
   for (const p of expiring) {
     const teamId = p.teamId!;
+    // Former first-round picks coming off their rookie deal are restricted: their team can match any offer.
+    const restricted = p.contract?.kind === 'rookie' && p.draft?.round === 1 && playerAge(p, year) <= 26;
     if (teamId === me) {
       save.offseason!.birdRights[p.id] = me;
-      mineLeft.push(fullName(p));
+      if (restricted) rfa[p.id] = me;
+      mineLeft.push(`${fullName(p)}${restricted ? ' (restricted)' : ''}`);
+    } else if (restricted && playerValue(league, p, teamStrategy(league, teamId)) >= 3) {
+      rfa[p.id] = teamId;
     } else if (wouldKeep(save, p, teamId, rng)) {
       const salary = marketSalary(league.settings, playerOverall(p), playerAge(p, year), p.experience);
       const years = playerAge(p, year) <= 28 ? rng.int(2, 4) : rng.int(1, 2);
@@ -184,7 +208,7 @@ export function startFreeAgency(original: SaveGame, rng = new Rng(newSeed())): S
   save.offseason!.faDay = 0;
   save.season = { ...save.season, mleUsed: false, contractTalks: [], offers: [], declinedDeals: [] };
   addMessage(save, 
-    msg(save, 'fa-open', 'Assistant GM', 'Free agency is open', `${mineLeft.length ? `Our free agents: ${mineLeft.join(', ')}. We hold their Bird rights, so we can go over the cap to keep them. ` : ''}${resigned.length ? `Around the league, teams kept ${resigned.slice(0, 5).join(', ')}${resigned.length > 5 ? ' and others' : ''}. ` : ''}Make offers from a player's page or the free-agent list. Other teams sign players each day.`),
+    msg(save, 'fa-open', 'Assistant GM', 'Free agency is open', `${optionNews}${mineLeft.length ? `Our free agents: ${mineLeft.join(', ')}. We hold their Bird rights, so we can go over the cap to keep them. Restricted free agents can sign offer sheets elsewhere, and we get to match. ` : ''}${resigned.length ? `Around the league, teams kept ${resigned.slice(0, 5).join(', ')}${resigned.length > 5 ? ' and others' : ''}. ` : ''}Make offers from a player's page or the free-agent list. Other teams sign players each day.`),
   );
   return save;
 }
@@ -242,8 +266,18 @@ export function freeAgencyDay(original: SaveGame, rng = new Rng(newSeed())): Sav
   const winPct = new Map(standings(league, save.season.games).map((r) => [r.teamId, r.w + r.l ? r.w / (r.w + r.l) : 0.5]));
   const signedToday = new Map<string, number>();
   const size = (teamId: string) => rosterOf(league, teamId).filter((p) => p.contract?.kind !== 'two-way').length;
+  const o2 = save.offseason!;
+  // Offer sheets you did not answer by today: he signs with that team.
+  for (const sheet of (o2.offerSheets ?? []).filter((x) => x.day < o2.faDay)) {
+    const p = league.players.find((x) => x.id === sheet.playerId);
+    if (p && !p.teamId) signWith(save, p, sheet.teamId, sheet.salary, sheet.years);
+    if (p) delete o2.rfa?.[p.id];
+  }
+  o2.offerSheets = (o2.offerSheets ?? []).filter((x) => x.day >= o2.faDay);
+  const pending = new Set(o2.offerSheets.map((x) => x.playerId));
+  const floor = salaryFloor(cba);
   const pool = league.players
-    .filter((p) => !p.teamId && save.offseason!.birdRights[p.id] !== me)
+    .filter((p) => !p.teamId && !pending.has(p.id) && (o2.birdRights[p.id] !== me || o2.rfa?.[p.id] === me))
     .sort((a, b) => playerOverall(b) - playerOverall(a))
     .slice(0, 120);
   for (const p of pool) {
@@ -263,23 +297,33 @@ export function freeAgencyDay(original: SaveGame, rng = new Rng(newSeed())): Sav
       const budget = aiBudget(save, t.id);
       if (budget.limit === cba.minimumSalary && !minLevel) continue;
       // Teams pay up to the ask (a little more for players they value), never past their budget.
-      const want = Math.round(ask * (1 + rng.normal(0.03, 0.04)));
+      // Teams under the salary floor have money they must spend anyway: they bid higher.
+      const underFloor = teamPayroll(league, t.id, year) < floor;
+      const want = Math.round(ask * (1 + rng.normal(underFloor ? 0.1 : 0.03, 0.04)));
       const salary = Math.min(want, budget.limit);
       if (salary < ask * (lastDay ? 0.75 : 0.95)) continue;
       offers.push({ teamId: t.id, salary, mle: budget.mle, score: salary * (1 + 0.15 * (winPct.get(t.id) ?? 0.5)) * (1 + rng.normal(0, 0.03)) });
     }
-    const best = offers.sort((x, y) => y.score - x.score)[0];
+    const holder = o2.rfa?.[p.id];
+    const best = offers.filter((x) => x.teamId !== holder).sort((x, y) => y.score - x.score)[0];
     if (!best) continue;
     const years = playerAge(p, year) <= 28 ? rng.int(2, 4) : rng.int(1, 2);
-    p.teamId = best.teamId;
-    p.contract = {
-      years: Array.from({ length: years }, (_, i) => ({ season: year + i, salary: Math.round(best.salary * 1.05 ** i) })),
-      option: null,
-      kind: best.salary <= cba.minimumSalary ? 'minimum' : 'standard',
-      noTrade: false,
-      signedSeason: year,
-    };
-    assignJersey(league, p);
+    if (holder === me) {
+      // Your restricted free agent signed an offer sheet: you decide whether to match.
+      o2.offerSheets!.push({ playerId: p.id, teamId: best.teamId, salary: best.salary, years, day: o2.faDay });
+      const t = league.teams.find((x) => x.id === best.teamId);
+      addMessage(save, msg(save, `sheet-${p.id}`, 'Assistant GM', `Offer sheet for ${fullName(p)}`, `The ${t?.name} offered ${fullName(p)} ${years} years at $${(best.salary / 1e6).toFixed(1)}M a season. He is a restricted free agent, so we can match it (Offseason screen). If we do not answer by tomorrow, he joins them.`));
+      continue;
+    }
+    // Another AI team holds his rights: it matches when he is worth the price.
+    const matcher = holder && playerValue(league, p, teamStrategy(league, holder)) * cba.salaryCap * 0.012 >= best.salary * 0.9 ? holder : null;
+    const signedBy = matcher ?? best.teamId;
+    signWith(save, p, signedBy, best.salary, years);
+    if (holder) delete o2.rfa![p.id];
+    if (matcher) {
+      if (displayRating(playerOverall(p)) >= 76) signed.push(`${fullName(p)} stays with the ${league.teams.find((t) => t.id === matcher)?.name} (matched an offer sheet)`);
+      continue;
+    }
     signedToday.set(best.teamId, (signedToday.get(best.teamId) ?? 0) + 1);
     if (best.mle) save.offseason!.mleUsed.push(best.teamId);
     if (displayRating(playerOverall(p)) >= 78) signed.push(`${fullName(p)} to the ${league.teams.find((t) => t.id === best.teamId)?.name} (${offers.length > 1 ? `${offers.length} offers, ` : ''}$${(best.salary / 1e6).toFixed(1)}M)`);
@@ -304,7 +348,12 @@ export function freeAgencyDay(original: SaveGame, rng = new Rng(newSeed())): Sav
 export function startNewSeason(original: SaveGame, rng = new Rng(newSeed())): SaveGame {
   const o = original.offseason;
   if (!o || o.stage === 'draft') return original;
-  const save = structuredClone(original);
+  // Skipping ahead: the other teams still finish free agency.
+  let rest = original;
+  while (rest.offseason && rest.offseason.faDay < FA_DAYS) rest = freeAgencyDay(rest, rng);
+  // Offer sheets still open are not matched: the players join the teams that offered.
+  for (const sheet of rest.offseason?.offerSheets ?? []) rest = declineOfferSheet(rest, sheet.playerId);
+  const save = structuredClone(rest);
   const { league } = save;
   const me = save.career.teamId;
   const year = league.meta.season;
@@ -364,6 +413,101 @@ export function startNewSeason(original: SaveGame, rng = new Rng(newSeed())): Sa
     );
   }
   return save;
+}
+
+/** A free agent signs with a team: salary rising 5% a year. */
+function signWith(save: SaveGame, p: Player, teamId: string, salary: number, years: number) {
+  const { league } = save;
+  const year = league.meta.season;
+  p.teamId = teamId;
+  p.contract = {
+    years: Array.from({ length: years }, (_, i) => ({ season: year + i, salary: Math.round(salary * 1.05 ** i) })),
+    option: null,
+    kind: salary <= league.settings.minimumSalary ? 'minimum' : 'standard',
+    noTrade: false,
+    signedSeason: year,
+  };
+  assignJersey(league, p);
+}
+
+/** Match an offer sheet for your restricted free agent: he stays, on the same terms. */
+export function matchOfferSheet(original: SaveGame, playerId: string): SaveGame {
+  const sheet = original.offseason?.offerSheets?.find((x) => x.playerId === playerId);
+  if (!sheet) return original;
+  const save = structuredClone(original);
+  const o = save.offseason!;
+  const p = save.league.players.find((x) => x.id === playerId)!;
+  signWith(save, p, save.career.teamId, sheet.salary, sheet.years);
+  o.offerSheets = o.offerSheets!.filter((x) => x.playerId !== playerId);
+  delete o.rfa?.[playerId];
+  delete o.birdRights[playerId];
+  addMessage(save, msg(save, `match-${playerId}`, 'Assistant GM', `We matched the offer for ${fullName(p)}`, `He stays: ${sheet.years} years at $${(sheet.salary / 1e6).toFixed(1)}M a season.`));
+  return save;
+}
+
+/** Let your restricted free agent go to the team that gave him the offer sheet. */
+export function declineOfferSheet(original: SaveGame, playerId: string): SaveGame {
+  const sheet = original.offseason?.offerSheets?.find((x) => x.playerId === playerId);
+  if (!sheet) return original;
+  const save = structuredClone(original);
+  const o = save.offseason!;
+  const p = save.league.players.find((x) => x.id === playerId)!;
+  signWith(save, p, sheet.teamId, sheet.salary, sheet.years);
+  o.offerSheets = o.offerSheets!.filter((x) => x.playerId !== playerId);
+  delete o.rfa?.[playerId];
+  delete o.birdRights[playerId];
+  return save;
+}
+
+/** Your players with an option year next season: [player, option type, salary]. */
+export function pendingOptions(save: SaveGame): { player: Player; type: 'player' | 'team'; salary: number }[] {
+  const year = (save.offseason?.draftYear ?? save.league.meta.season + 1);
+  return save.league.players
+    .filter((p) => p.teamId === save.career.teamId && p.contract?.option?.season === year)
+    .map((p) => ({ player: p, type: p.contract!.option!.type, salary: p.contract!.years.find((y) => y.season === year)?.salary ?? 0 }));
+}
+
+export function setOptionChoice(original: SaveGame, playerId: string, choice: 'exercise' | 'decline'): SaveGame {
+  if (!original.offseason) return original;
+  const save = structuredClone(original);
+  save.offseason!.optionChoices = { ...(save.offseason!.optionChoices ?? {}), [playerId]: choice };
+  return save;
+}
+
+/**
+ * Options for the new league year are decided: players opt out when they can
+ * earn clearly more on the market; teams keep options worth the money (your
+ * choices, or your assistant's). A declined option ends the contract now.
+ * Returns a sentence for your inbox.
+ */
+function applyOptions(save: SaveGame): string {
+  const { league } = save;
+  const year = league.meta.season;
+  const me = save.career.teamId;
+  const lines: string[] = [];
+  for (const p of league.players) {
+    const opt = p.contract?.option;
+    if (!p.teamId || !opt || opt.season !== year) continue;
+    const salary = p.contract!.years.find((y) => y.season === year)?.salary ?? 0;
+    const worth = marketSalary(league.settings, playerOverall(p), playerAge(p, year), p.experience);
+    let keep: boolean;
+    if (opt.type === 'player') keep = !(worth > salary * 1.1 && playerAge(p, year) <= 32);
+    else if (p.teamId === me) keep = (save.offseason?.optionChoices?.[p.id] ?? (worth >= salary * 0.85 ? 'exercise' : 'decline')) === 'exercise';
+    else keep = worth >= salary * 0.85;
+    if (keep) p.contract!.option = null;
+    else {
+      p.contract!.years = p.contract!.years.filter((y) => y.season < year);
+      p.contract!.option = null;
+    }
+    if (p.teamId === me) {
+      lines.push(
+        opt.type === 'player'
+          ? `${fullName(p)} ${keep ? 'opted in' : 'opted out'} of his player option`
+          : `we ${keep ? 'exercised' : 'declined'} the team option on ${fullName(p)}`,
+      );
+    }
+  }
+  return lines.length ? `Options: ${lines.join('; ')}. ` : '';
 }
 
 /** Sign minimum-level free agents (one year, the minimum) until the team has the minimum roster. Returns who signed. */

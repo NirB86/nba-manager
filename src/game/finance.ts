@@ -2,7 +2,7 @@
 // media and merchandise money, payroll and the luxury tax bill, the owner's
 // payroll budget, and what happens when the owner runs out of patience.
 
-import { displayRating, playerOverall, rosterOf, standings, teamPayroll, type CbaSettings, type DayReport, type Market } from '../engine';
+import { displayRating, playerOverall, rosterOf, salaryFloor, standings, teamPayroll, type CbaSettings, type DayReport, type Market } from '../engine';
 import { addMessage, type Difficulty, type InboxMessage, type SaveGame } from '../storage/saves';
 import { ownerExpectation } from './career';
 import { ownerMood } from './news';
@@ -23,6 +23,8 @@ export interface SeasonLedger {
   tax: number;
   /** Arena operations, staff and travel. */
   ops?: number;
+  /** Paid to the players when the payroll ends the season under the salary floor. */
+  floor?: number;
 }
 
 export interface FinanceState {
@@ -41,7 +43,7 @@ export interface JobOffer {
   reason: 'fired' | 'interest';
 }
 
-export const profit = (l: SeasonLedger) => l.tickets + l.media + l.merch + l.playoffs - l.payroll - l.tax - (l.ops ?? 0);
+export const profit = (l: SeasonLedger) => l.tickets + l.media + l.merch + l.playoffs - l.payroll - l.tax - (l.ops ?? 0) - (l.floor ?? 0);
 export const revenue = (l: SeasonLedger) => l.tickets + l.media + l.merch + l.playoffs;
 
 const emptyLedger = (season: number): SeasonLedger => ({ season, homeGames: 0, attendance: 0, tickets: 0, media: 0, merch: 0, playoffs: 0, payroll: 0, tax: 0, ops: 0 });
@@ -150,6 +152,15 @@ export function assessTax(save: SaveGame) {
   const f = finance(save);
   const payroll = teamPayroll(save.league, save.career.teamId, save.league.meta.season);
   f.ledger.tax = luxuryTaxBill(save.league.settings, payroll);
+  // Under the salary floor: the shortfall is paid to the players anyway.
+  const floor = salaryFloor(save.league.settings);
+  f.ledger.floor = Math.max(0, floor - payroll);
+  if (f.ledger.floor > 0) {
+    addMessage(
+      save,
+      msg(save, 'floor', 'Owner', `Salary floor shortfall: $${(f.ledger.floor / 1e6).toFixed(1)}M`, `Our payroll finished under the league's salary floor ($${(floor / 1e6).toFixed(1)}M), so the $${(f.ledger.floor / 1e6).toFixed(1)}M difference is paid out to our players. That money could have bought talent.`),
+    );
+  }
   if (f.ledger.tax > 0) {
     addMessage(save, 
       msg(save, 'tax', 'Owner', `Luxury tax bill: $${(f.ledger.tax / 1e6).toFixed(1)}M`, `Our payroll finished $${((payroll - save.league.settings.luxuryTax) / 1e6).toFixed(1)}M over the tax line, so we pay $${(f.ledger.tax / 1e6).toFixed(1)}M in luxury tax on top of salaries.`),
