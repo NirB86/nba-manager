@@ -1,0 +1,39 @@
+name: Keep Supabase awake
+
+# Supabase pauses free projects after 7 days without activity. This makes a
+# small database request every 3 days so sign-in, the private league download
+# and cloud saves stay available. It uses the public URL and publishable key
+# from src/cloud/config.ts (the same ones every visitor's browser gets) and
+# reads nothing private.
+
+on:
+  schedule:
+    - cron: '17 6 */3 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: src/cloud/config.ts
+          sparse-checkout-cone-mode: false
+      - name: Ping the database
+        run: |
+          url=$(grep -oE "https://[a-z0-9]+\.supabase\.co" src/cloud/config.ts | head -1)
+          key=$(grep -oE "sb_publishable_[A-Za-z0-9_-]+" src/cloud/config.ts | head -1)
+          if [ -z "$url" ] || [ -z "$key" ]; then echo "Supabase settings not found in src/cloud/config.ts"; exit 1; fi
+          # A REST request runs a database query (the API schema), which counts as activity.
+          code=$(curl -sS -o /dev/null -w "%{http_code}" --max-time 60 "$url/rest/v1/" -H "apikey: $key" -H "Authorization: Bearer $key")
+          echo "Supabase REST answered HTTP $code"
+          # 2xx/4xx mean the project is up (4xx: allowed to read nothing, which is fine).
+          # 5xx or no answer usually means it is paused: fail so GitHub emails you.
+          if [ "$code" -ge 500 ] || [ "$code" = "000" ]; then
+            echo "::error::The Supabase project did not answer. It may be paused: restore it from the Supabase dashboard."
+            exit 1
+          fi
