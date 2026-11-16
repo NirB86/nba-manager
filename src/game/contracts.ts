@@ -4,7 +4,7 @@
 
 import { Rng, assignJersey, buildContract, capStatus, fullName, marketSalary, maxSalaryShare, playerAge, playerOverall, projectedCba, rosterOf, teamPayroll, teamStrategy, type Contract, type Player } from '../engine';
 import { endHoldout } from './demands';
-import type { SaveGame } from '../storage/saves';
+import { addMessage, type SaveGame } from '../storage/saves';
 import { morale } from './morale';
 import { potentialRange } from './scouting';
 
@@ -236,7 +236,7 @@ function sign(original: SaveGame, playerId: string, n: Negotiation, offer: Offer
   endHoldout(save, p.id);
   const money = (v: number) => `$${(v / 1e6).toFixed(1)}M`;
   const totalValue = p.contract.years.filter((y) => y.season >= n.firstSeason).reduce((s, y) => s + y.salary, 0);
-  save.inbox.unshift({
+  addMessage(save, {
     id: `contract-${p.id}-${Date.now()}`,
     from: 'Assistant GM',
     subject: n.kind === 'extension' ? `${fullName(p)} signs an extension` : `${fullName(p)} signs with us`,

@@ -29,7 +29,7 @@ export interface GenerateOptions {
 }
 
 /** Typical NBA roster shape: overall ratings from the best player down to the 15th man. */
-const ROSTER_TEMPLATE = [84, 78, 75, 72, 70, 68, 66, 64, 62, 60, 58, 56, 54, 52, 50];
+const ROSTER_TEMPLATE = [83, 77, 74, 72, 70, 68, 66, 64, 62, 60, 58, 56, 54, 52, 50];
 
 const ROSTER_POSITIONS: Position[] = ['PG', 'PG', 'SG', 'SG', 'SF', 'SF', 'PF', 'PF', 'C', 'C'];
 
@@ -66,11 +66,11 @@ export function generateLeague(opts: GenerateOptions = {}): LeagueFile {
     const strength = strengths[ti] ?? 0;
     const positions = rng.shuffle([...ROSTER_POSITIONS, ...Array.from({ length: 5 }, () => rng.pick(POSITIONS))]);
     // A superstar on some teams.
-    const star = rng.chance(0.3) ? rng.int(3, 8) : 0;
+    const star = rng.chance(0.27) ? rng.int(2, 7) : 0;
     const jerseys = new Set<number>();
     const teamSurnames = new Set<string>();
     ROSTER_TEMPLATE.forEach((base, slot) => {
-      const target = clamp(Math.round(base + strength + rng.normal(0, 2.2) + (slot === 0 ? star : 0)), 40, 97);
+      const target = clamp(Math.round(base + strength + rng.normal(0, 2.2) + (slot === 0 ? star : 0)), 40, 95);
       const position = positions[slot] ?? rng.pick(POSITIONS);
       const draftTeamId = rng.chance(0.5) ? team.id : rng.pick(teams).id;
       const player = makePlayer(rng, cba, season, ids, usedNames, { teamId: team.id, draftTeamId, teamSurnames, position, targetOvr: target, slot });
@@ -197,10 +197,11 @@ function makePlayer(
   // Age: stars cluster in their prime, the end of the bench is young or old.
   const age = clamp(
     Math.round(spec.slot < 3 ? rng.normal(27, 3) : rng.chance(0.55) ? rng.normal(23, 2) : rng.normal(30, 3)),
-    19,
+    spec.slot < 3 ? 21 : 19,
     39,
   );
-  const experience = clamp(age - rng.int(19, 22), 0, 20);
+  // Rookies are rarely good right away: the best players have a few seasons behind them.
+  const experience = clamp(age - rng.int(19, 22), spec.targetOvr >= 72 ? 2 : 0, 20);
 
   // Potential: young players have room to grow.
   const growth = age <= 22 ? rng.int(6, 16) : age <= 25 ? rng.int(2, 9) : age <= 28 ? rng.int(0, 3) : 0;

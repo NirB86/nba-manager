@@ -10,6 +10,7 @@ import {
   teamName,
   teamPayroll,
   teamSummaries,
+  talentLevel,
   type LeagueFile,
 } from '../engine';
 import { money, seasonLabel } from '../ui/format';
@@ -58,6 +59,7 @@ export function createCareer(league: LeagueFile, career: CareerSettings, name: s
     inbox: welcomeMessages(league, career),
     league,
     season: newSeason(league, new Rng(newSeed())),
+    ratingTarget: talentLevel(league),
   };
 }
 

@@ -2,7 +2,7 @@
 // the inbox. Runs in small chunks so the screen stays responsive.
 
 import { Rng, fullName, newSeed, playerOverall, simulateDay, standings, teamName, type DayReport, type GameResult, type PlayEvent, type ScheduledGame, type SeasonState } from '../engine';
-import type { InboxMessage, SaveGame } from '../storage/saves';
+import { addMessage, type InboxMessage, type SaveGame } from '../storage/saves';
 import { weeklyMarket } from './market';
 import { checkAchievements } from './achievements';
 import { weeklyDemands } from './demands';
@@ -61,7 +61,7 @@ function afterDay(save: SaveGame, report: DayReport, rng: Rng, before: { phase: 
     const opp = save.league.teams.find((t) => t.id === rec.oppId);
     save.season.rumors = [`RECORD: ${rec.name} ${rec.value} ${RECORD_LABEL[stat].toLowerCase()} vs ${opp?.abbrev ?? ''}`, ...(save.season.rumors ?? [])].slice(0, 6);
     if (save.league.players.find((p) => p.id === rec.playerId)?.teamId === save.career.teamId)
-      save.inbox.unshift(message(save, `record-${stat}-${season.day}`, 'Head coach', `Record night: ${rec.value} ${RECORD_LABEL[stat].toLowerCase()}`, `${rec.name} set a new single-game record in this league with ${rec.value} ${RECORD_LABEL[stat].toLowerCase()} against the ${opp?.name ?? 'opponent'}.`));
+      addMessage(save, message(save, `record-${stat}-${season.day}`, 'Head coach', `Record night: ${rec.value} ${RECORD_LABEL[stat].toLowerCase()}`, `${rec.name} set a new single-game record in this league with ${rec.value} ${RECORD_LABEL[stat].toLowerCase()} against the ${opp?.name ?? 'opponent'}.`));
   }
   // Once a game week: offers, AI trades and rumors.
   if (season.phase !== 'done' && season.day !== before.day && season.day % 7 === 0) {
@@ -93,7 +93,7 @@ function injuryNews(save: SaveGame, report: DayReport) {
     if (!p) continue;
     const out = injury.gamesLeft >= 82 ? 'out for the season' : `out about ${injury.gamesLeft} game${injury.gamesLeft === 1 ? '' : 's'}`;
     if (p.teamId === me) {
-      save.inbox.unshift({ id: `injury-${p.id}-${save.season.day}`, from: 'Medical staff', subject: `${fullName(p)}: ${injury.type.toLowerCase()}, ${out}`, body: `${fullName(p)} picked up a ${injury.type.toLowerCase()} and will be ${out}. He is off the game roster until he is healthy; the rotation adjusts on its own.`, date: dateLabel(save.season), read: false });
+      addMessage(save, { id: `injury-${p.id}-${save.season.day}`, from: 'Medical staff', subject: `${fullName(p)}: ${injury.type.toLowerCase()}, ${out}`, body: `${fullName(p)} picked up a ${injury.type.toLowerCase()} and will be ${out}. He is off the game roster until he is healthy; the rotation adjusts on its own.`, date: dateLabel(save.season), read: false });
     } else if (playerOverall(p) >= 72 || injury.gamesLeft >= 15) {
       const team = save.league.teams.find((t) => t.id === p.teamId);
       save.season.rumors = [`Injury: ${team?.name ?? ''} ${p.lastName} ${out}`, ...(save.season.rumors ?? [])].slice(0, 6);
@@ -200,7 +200,7 @@ function news(save: SaveGame, phaseBefore: SeasonState['phase'], seriesBefore: n
     return t ? teamName(t) : id;
   };
   const push = (m: InboxMessage) => {
-    if (!save.inbox.some((x) => x.id === m.id)) save.inbox.unshift(m);
+    if (!save.inbox.some((x) => x.id === m.id)) addMessage(save, m);
   };
 
   if (phaseBefore === 'regular' && season.phase === 'playoffs') {

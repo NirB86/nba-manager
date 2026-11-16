@@ -81,8 +81,17 @@ export interface SaveGame {
   press?: PressConference | null;
   /** Draft scouting: where your scouts are looking, and what they know about each prospect. */
   draftScouting?: DraftScouting;
+  /** The league's talent level when the career started: ratings are kept on this scale. */
+  ratingTarget?: number;
   /** Achievements unlocked in this career, oldest first. */
   achievements?: Unlocked[];
+}
+
+/** Add a message to the top of the inbox; an id already in use gets a suffix so every message stays unique. */
+export function addMessage(save: SaveGame, m: InboxMessage) {
+  let id = m.id;
+  for (let n = 2; save.inbox.some((x) => x.id === id); n++) id = `${m.id}~${n}`;
+  save.inbox.unshift(id === m.id ? m : { ...m, id });
 }
 
 export interface SaveSummary {

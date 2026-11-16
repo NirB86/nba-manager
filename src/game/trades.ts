@@ -2,7 +2,7 @@
 // team's chance of saying yes, counter offers, and applying a done deal.
 
 import { checkMultiTrade, executeMultiTrade, fullName, teamName, teamStrategy, type MultiTrade, type TradeCheck, type TradeMove } from '../engine';
-import type { SaveGame } from '../storage/saves';
+import { addMessage, type SaveGame } from '../storage/saves';
 
 /** Trade deadline: about 60% of the way through the regular season. */
 export function tradeDeadlineDay(save: SaveGame): number {
@@ -212,7 +212,7 @@ export function completeDeal(original: SaveGame, deal: MultiTrade): SaveGame {
   const got = deal.moves.filter((m) => m.to === me).map(describe);
   executeMultiTrade(league, deal);
   const partners = deal.teams.filter((t) => t !== me).map((id) => league.teams.find((t) => t.id === id)).filter(Boolean).map((t) => teamName(t!));
-  save.inbox.unshift({
+  addMessage(save, {
     id: `trade-${Date.now()}`,
     from: 'Assistant GM',
     subject: `Trade completed with the ${partners.join(' and the ')}`,

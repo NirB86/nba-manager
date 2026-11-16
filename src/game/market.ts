@@ -3,7 +3,7 @@
 // during the regular season, before the trade deadline.
 
 import { Rng, checkMultiTrade, executeMultiTrade, fullName, pickValue, playerAge, playerOverall, playerValue, rosterOf, salaryIn, teamStrategy, type LeagueFile, type MultiTrade, type Player, type TradeMove } from '../engine';
-import type { SaveGame } from '../storage/saves';
+import { addMessage, type SaveGame } from '../storage/saves';
 import { assetLabel, completeDeal, tradeDeadlineDay } from './trades';
 
 export interface TradeOffer {
@@ -115,7 +115,7 @@ export function weeklyMarket(save: SaveGame, rng: Rng) {
       const offer: TradeOffer = { id: `offer-${league.meta.season}-${season.day}-${buyer}`, fromTeam: buyer, deal, day: season.day, expiresDay: season.day + OFFER_DAYS, status: 'open' };
       season.offers = [...(season.offers ?? []), offer];
       const get = deal.moves.filter((m) => m.to === me).map((m) => assetLabel(save, m));
-      save.inbox.unshift({
+      addMessage(save, {
         id: offer.id,
         from: 'Assistant GM',
         subject: `Offer from the ${name(buyer)} for ${fullName(target)}`,

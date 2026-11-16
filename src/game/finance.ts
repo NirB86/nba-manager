@@ -3,7 +3,7 @@
 // payroll budget, and what happens when the owner runs out of patience.
 
 import { displayRating, playerOverall, rosterOf, standings, teamPayroll, type CbaSettings, type DayReport, type Market } from '../engine';
-import type { Difficulty, InboxMessage, SaveGame } from '../storage/saves';
+import { addMessage, type Difficulty, type InboxMessage, type SaveGame } from '../storage/saves';
 import { ownerExpectation } from './career';
 import { ownerMood } from './news';
 
@@ -151,7 +151,7 @@ export function assessTax(save: SaveGame) {
   const payroll = teamPayroll(save.league, save.career.teamId, save.league.meta.season);
   f.ledger.tax = luxuryTaxBill(save.league.settings, payroll);
   if (f.ledger.tax > 0) {
-    save.inbox.unshift(
+    addMessage(save, 
       msg(save, 'tax', 'Owner', `Luxury tax bill: $${(f.ledger.tax / 1e6).toFixed(1)}M`, `Our payroll finished $${((payroll - save.league.settings.luxuryTax) / 1e6).toFixed(1)}M over the tax line, so we pay $${(f.ledger.tax / 1e6).toFixed(1)}M in luxury tax on top of salaries.`),
     );
   }
@@ -189,14 +189,14 @@ export function ownerVerdict(save: SaveGame, grade: string) {
     const pick = weak.sort((a, b) => hashStr(a.id + year) - hashStr(b.id + year)).slice(0, 3);
     save.career.fired = true;
     save.jobOffers = pick.map((t) => ({ teamId: t.id, reason: 'fired' as const }));
-    save.inbox.unshift(
+    addMessage(save, 
       msg(save, 'fired', 'Owner', 'You are relieved of your duties', `I have decided to make a change. Thank you for your work. Your agent has already heard from ${pick.map((t) => `the ${t.city} ${t.name}`).join(', ')}.`),
     );
   } else if ((grade === 'A+' || grade === 'A') && f.confidence >= 80) {
     const big = others.filter((t) => t.market === 'large').sort((a, b) => hashStr(a.id + year) - hashStr(b.id + year))[0];
     if (big) {
       save.jobOffers = [{ teamId: big.id, reason: 'interest' }];
-      save.inbox.unshift(msg(save, 'interest', 'Your agent', `The ${big.name} want to talk`, `After a season like that, the ${big.city} ${big.name} have asked about hiring you. You can take the job from Home before the draft, or stay where you are.`));
+      addMessage(save, msg(save, 'interest', 'Your agent', `The ${big.name} want to talk`, `After a season like that, the ${big.city} ${big.name} have asked about hiring you. You can take the job from Home before the draft, or stay where you are.`));
     }
   } else {
     save.jobOffers = [];
@@ -221,7 +221,7 @@ export function acceptJob(original: SaveGame, teamId: string): SaveGame {
   save.career.jobs = [...(save.career.jobs ?? []), { teamId: old?.id ?? '', until: save.league.meta.season, fired: !!original.career.fired }];
   save.jobOffers = [];
   save.finance = { ticketPrice: BASE_PRICE[team.market], ledger: emptyLedger(save.league.meta.season), history: [], confidence: 55 };
-  save.inbox.unshift(msg(save, 'new-job', 'Owner', `Welcome to the ${team.name}`, `${ownerExpectation(save.league, teamId).goal}: that is what I expect. The draft and free agency are coming up.`));
+  addMessage(save, msg(save, 'new-job', 'Owner', `Welcome to the ${team.name}`, `${ownerExpectation(save.league, teamId).goal}: that is what I expect. The draft and free agency are coming up.`));
   return save;
 }
 

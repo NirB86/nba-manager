@@ -21,6 +21,8 @@ import {
   rosterOf,
   assignJersey,
   fixJerseys,
+  rebalanceRatings,
+  talentLevel,
   standings,
   signDraftedPlayer,
   teamName,
@@ -31,7 +33,7 @@ import {
   type LeagueFile,
   type Player,
 } from '../engine';
-import type { InboxMessage, SaveGame } from '../storage/saves';
+import { addMessage, type InboxMessage, type SaveGame } from '../storage/saves';
 import { MLE_SHARE } from './contracts';
 import { induct, recordPlayerSeasons } from './history';
 import { rollFinances } from './finance';
@@ -84,7 +86,7 @@ export function startOffseason(original: SaveGame, rng = new Rng(newSeed())): Sa
   const me = save.career.teamId;
   const mine = order.filter((s) => s.teamId === me);
   const jumped = order.filter((s) => s.jumped).map((s) => league.teams.find((t) => t.id === s.originalTeamId)?.name);
-  save.inbox.unshift(
+  addMessage(save, 
     msg(save, 'draft-order', 'League office', `The ${draftYear} draft order is set`, `${jumped.length ? `Lottery winners: the ${jumped.join(', the ')} moved up. ` : ''}${mine.length ? `We pick at ${mine.map((s) => `#${s.overall}`).join(' and ')}.` : 'We have no picks this year.'} Your scouts have a report on every prospect.`),
   );
   // AI teams pick until it is our turn.
@@ -113,7 +115,7 @@ function makePick(save: SaveGame, playerId: string, rng: Rng) {
   o.made.push({ overall: slot.overall, playerId: p!.id, teamId: slot.teamId });
   o.onClock++;
   if (slot.teamId === save.career.teamId) {
-    save.inbox.unshift(msg(save, `drafted-${p!.id}`, 'Assistant GM', `We drafted ${fullName(p!)} at #${slot.overall}`, `${p!.position}, ${o.draftYear - p!.born.year}, ${p!.college ?? p!.born.country}. ${slot.round === 1 ? 'He signs a four-year rookie-scale deal.' : 'He signs a two-year minimum deal.'}`));
+    addMessage(save, msg(save, `drafted-${p!.id}`, 'Assistant GM', `We drafted ${fullName(p!)} at #${slot.overall}`, `${p!.position}, ${o.draftYear - p!.born.year}, ${p!.college ?? p!.born.country}. ${slot.round === 1 ? 'He signs a four-year rookie-scale deal.' : 'He signs a two-year minimum deal.'}`));
   }
 }
 
@@ -181,7 +183,7 @@ export function startFreeAgency(original: SaveGame, rng = new Rng(newSeed())): S
   save.offseason!.stage = 'free-agency';
   save.offseason!.faDay = 0;
   save.season = { ...save.season, mleUsed: false, contractTalks: [], offers: [], declinedDeals: [] };
-  save.inbox.unshift(
+  addMessage(save, 
     msg(save, 'fa-open', 'Assistant GM', 'Free agency is open', `${mineLeft.length ? `Our free agents: ${mineLeft.join(', ')}. We hold their Bird rights, so we can go over the cap to keep them. ` : ''}${resigned.length ? `Around the league, teams kept ${resigned.slice(0, 5).join(', ')}${resigned.length > 5 ? ' and others' : ''}. ` : ''}Make offers from a player's page or the free-agent list. Other teams sign players each day.`),
   );
   return save;
@@ -291,7 +293,7 @@ export function freeAgencyDay(original: SaveGame, rng = new Rng(newSeed())): Sav
     }
   }
   save.season.rumors = [...signed.slice(0, 4).map((s) => `Signed: ${s}`), ...(save.season.rumors ?? [])].slice(0, 6);
-  if (signed.length) save.inbox.unshift(msg(save, `fa-day-${save.offseason!.faDay}`, 'Assistant GM', `Free agency, day ${save.offseason!.faDay}`, `Signings around the league: ${signed.join('; ')}.`));
+  if (signed.length) addMessage(save, msg(save, `fa-day-${save.offseason!.faDay}`, 'Assistant GM', `Free agency, day ${save.offseason!.faDay}`, `Signings around the league: ${signed.join('; ')}.`));
   return save;
 }
 
@@ -320,6 +322,9 @@ export function startNewSeason(original: SaveGame, rng = new Rng(newSeed())): Sa
   for (const t of league.teams) fillRoster(league, t.id);
   const filledMine = fillRoster(league, me);
   fixJerseys(league);
+  // Ratings stay on the same scale year after year (the level the career started at).
+  save.ratingTarget ??= talentLevel(league);
+  rebalanceRatings(league, save.ratingTarget, rng);
   // Unsigned players drift out of the league (overseas, retirement): keep the best 90 or so, young talent first.
   const keep = new Set(
     league.players
@@ -350,11 +355,11 @@ export function startNewSeason(original: SaveGame, rng = new Rng(newSeed())): Sa
   const up = risers.filter((x) => x.d > 0).slice(0, 4).map((x) => `${fullName(x.p)} +${x.d}`);
   const down = risers.filter((x) => x.d < 0).slice(-3).map((x) => `${fullName(x.p)} ${x.d}`);
   const myRetired = retired.filter((p) => myBefore.has(p.id)).map(fullName);
-  save.inbox.unshift(
+  addMessage(save, 
     msg(save, 'camp', 'Head coach', 'Training camp report', `${up.length ? `Improved over the summer: ${up.join(', ')}. ` : ''}${down.length ? `Lost a step: ${down.join(', ')}. ` : ''}${myRetired.length ? `Retired: ${myRetired.join(', ')}. ` : ''}${cutMine.length ? `To get down to ${league.settings.rosterMax}, we waived ${cutMine.map(fullName).join(', ')}. ` : ''}${filledMine.length ? `To reach the ${league.settings.rosterMin}-man minimum, we signed ${filledMine.map(fullName).join(', ')} to one-year minimum deals. ` : ''}${retired.length} players retired around the league.`.trim()),
   );
   if (inducted.length) {
-    save.inbox.unshift(
+    addMessage(save, 
       msg(save, 'hof', 'League office', `Hall of Fame: ${inducted.map((h) => h.name).join(', ')}`, `Inducted after retiring this summer: ${inducted.map((h) => `${h.name} (${h.honors.slice(0, 3).join(', ') || `${h.totals.pts.toLocaleString()} points`})`).join('; ')}.`),
     );
   }

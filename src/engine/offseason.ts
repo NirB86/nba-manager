@@ -25,7 +25,8 @@ export function generateDraftClass(league: LeagueFile, rng: Rng, year: number, c
     const position = rng.pick(POSITIONS);
     // A few franchise-level talents at the top, then a long tail.
     const tier = i / count;
-    const now = clamp(Math.round(rng.normal(66 - tier * 18, 4)), 38, 76);
+    // The best prospects arrive around 78-80 on screen, like real top picks.
+    const now = clamp(Math.round(rng.normal(63 - tier * 17, 3.5)), 38, 70);
     const age = clamp(Math.round(rng.normal(20 + tier * 1.2, 1)), 19, 23);
     const growth = clamp(Math.round(rng.normal(age <= 20 ? 17 : age <= 21 ? 13 : 9, 4) - tier * 4), 2, 26);
     const name = pickName(rng, PLAYER_REGIONS, used);
@@ -181,6 +182,30 @@ function shiftAttributes(p: Player, target: number, age: number, rng: Rng): Attr
     attrs = next;
   }
   return attrs;
+}
+
+/** The league's talent level: the average overall of its best `n` players (12 a team). */
+export function talentLevel(league: LeagueFile, n = league.teams.length * 12): number {
+  const top = league.players.map(playerOverall).sort((a, b) => b - a).slice(0, n);
+  return top.length ? top.reduce((s, v) => s + v, 0) / top.length : 0;
+}
+
+/**
+ * Keep ratings from drifting over many seasons: if the league's talent level
+ * has moved away from `target`, every player shifts by the same small amount
+ * (at most 2 points a summer), so the order and gaps between players stay.
+ */
+export function rebalanceRatings(league: LeagueFile, target: number, rng: Rng): number {
+  const delta = Math.max(-2, Math.min(2, target - talentLevel(league)));
+  if (Math.abs(delta) < 0.3) return 0;
+  const year = league.meta.season;
+  for (const p of league.players) {
+    const before = playerOverall(p);
+    p.attributes = shiftAttributes(p, before + delta, playerAge(p, year), rng);
+    const after = playerOverall(p);
+    p.potential = Math.max(after, Math.min(99, p.potential + (after - before)));
+  }
+  return delta;
 }
 
 /** Players who retire this summer. Returns them; the caller removes them. */

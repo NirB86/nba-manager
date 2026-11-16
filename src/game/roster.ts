@@ -3,7 +3,7 @@
 // contracts, and converting a two-way player to a standard deal.
 
 import { assignJersey, fullName, playerAge, playerOverall, playerValue, rosterOf, salaryIn, teamPayroll, teamStrategy, type Player } from '../engine';
-import type { InboxMessage, SaveGame } from '../storage/saves';
+import { addMessage, type InboxMessage, type SaveGame } from '../storage/saves';
 
 const note = (save: SaveGame, id: string, subject: string, body: string): InboxMessage => ({ id: `${id}-${Date.now()}`, from: 'Assistant GM', subject, body, date: save.offseason ? 'Offseason' : `Day ${save.season.day + 1}`, read: false });
 const standard = (save: SaveGame, teamId: string) => rosterOf(save.league, teamId).filter((p) => p.contract?.kind !== 'two-way');
@@ -49,7 +49,7 @@ export function waivePlayer(original: SaveGame, playerId: string): MoveResult {
     p.teamId = by;
     assignJersey(league, p);
     const team = league.teams.find((t) => t.id === by);
-    save.inbox.unshift(note(save, `waive-${p.id}`, `${name} claimed off waivers`, `The ${team?.name} claimed ${name} and take over his contract, so none of his salary stays on our cap.`));
+    addMessage(save, note(save, `waive-${p.id}`, `${name} claimed off waivers`, `The ${team?.name} claimed ${name} and take over his contract, so none of his salary stays on our cap.`));
     return { ok: true, save, message: `${name} was claimed by the ${team?.name}: no dead money.` };
   }
   const owed = (p.contract?.years ?? []).filter((y) => y.season >= year);
@@ -61,7 +61,7 @@ export function waivePlayer(original: SaveGame, playerId: string): MoveResult {
   if (save.season.injuries) delete save.season.injuries[p.id];
   const total = owed.reduce((s, y) => s + y.salary, 0);
   const millions = (total / 1e6).toFixed(1);
-  save.inbox.unshift(
+  addMessage(save, 
     note(save, `waive-${p.id}`, `${name} waived`, total ? `Nobody claimed him. We still owe $${millions}M over ${owed.length} season${owed.length > 1 ? 's' : ''}, which stays on our cap as dead money.` : `${name} is a free agent now.`),
   );
   return { ok: true, save, message: total ? `${name} waived. $${millions}M stays on your cap as dead money.` : `${name} waived.` };
@@ -95,7 +95,7 @@ export function signTwoWay(original: SaveGame, playerId: string): MoveResult {
     signedSeason: year,
   };
   assignJersey(league, p);
-  save.inbox.unshift(note(save, `twoway-${p.id}`, `${fullName(p)} signs a two-way deal`, `${years} season${years > 1 ? 's' : ''} at half the minimum. He splits time with the G League and does not take one of the 15 roster spots.`));
+  addMessage(save, note(save, `twoway-${p.id}`, `${fullName(p)} signs a two-way deal`, `${years} season${years > 1 ? 's' : ''} at half the minimum. He splits time with the G League and does not take one of the 15 roster spots.`));
   return { ok: true, save, message: `${fullName(p)} signed a two-way contract.` };
 }
 
@@ -110,6 +110,6 @@ export function convertTwoWay(original: SaveGame, playerId: string): MoveResult 
   const year = league.meta.season;
   const salary = Math.max(league.settings.minimumSalary, Math.round(league.settings.minimumSalary * (1 + Math.max(0, playerOverall(p) - 50) * 0.02)));
   p.contract = { years: [{ season: year, salary }, { season: year + 1, salary: Math.round(salary * 1.05) }], option: { season: year + 1, type: 'team' }, kind: 'minimum', noTrade: false, signedSeason: year };
-  save.inbox.unshift(note(save, `convert-${p.id}`, `${fullName(p)} gets a standard contract`, 'Converted from his two-way deal: two seasons, the second a team option. He now takes a roster spot.'));
+  addMessage(save, note(save, `convert-${p.id}`, `${fullName(p)} gets a standard contract`, 'Converted from his two-way deal: two seasons, the second a team option. He now takes a roster spot.'));
   return { ok: true, save, message: `${fullName(p)} converted to a standard contract.` };
 }

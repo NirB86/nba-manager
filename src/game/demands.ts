@@ -3,7 +3,7 @@
 // season, and short-lived morale effects from promises and press conferences.
 
 import { fullName, marketSalary, playerAge, playerOverall, rosterOf, salaryIn, standings, type Player, type Rng } from '../engine';
-import type { InboxMessage, SaveGame } from '../storage/saves';
+import { addMessage, type InboxMessage, type SaveGame } from '../storage/saves';
 import { morale } from './morale';
 
 export interface TradeRequest {
@@ -96,7 +96,7 @@ export function weeklyDemands(save: SaveGame, rng: Rng) {
       if (mpg >= req.promise.minutes - 1) {
         delete d.requests[id];
         addMod(save, id, 2, 'You kept your promise about his minutes.', 40);
-        save.inbox.unshift(
+        addMessage(save, 
           note(
             save,
             `promise-kept-${id}`,
@@ -112,7 +112,7 @@ export function weeklyDemands(save: SaveGame, rng: Rng) {
         addMod(save, id, -3, 'You broke your promise about his minutes.', 45);
         addMod(save, null, -0.5, `Locker room tension: ${p.lastName} feels lied to.`, 21);
         save.season.rumors = [`${fullName(p)} goes public with his trade request`, ...(save.season.rumors ?? [])].slice(0, 6);
-        save.inbox.unshift(
+        addMessage(save, 
           note(
             save,
             `promise-broken-${id}`,
@@ -142,7 +142,7 @@ export function weeklyDemands(save: SaveGame, rng: Rng) {
     if (!chance || !rng.chance(chance)) continue;
     d.requests[p.id] = { day };
     const why = m.reasons.find((r) => r.effect < 0)?.text ?? 'He is not happy here.';
-    save.inbox.unshift(
+    addMessage(save, 
       note(
         save,
         `trade-request-${p.id}`,
@@ -174,7 +174,7 @@ export function promiseMinutes(original: SaveGame, playerId: string): SaveGame {
     },
   };
   const p = save.league.players.find((x) => x.id === playerId)!;
-  save.inbox.unshift(
+  addMessage(save, 
     note(
       save,
       `promise-${playerId}`,
@@ -203,7 +203,7 @@ export function holdouts(save: SaveGame, rng: Rng): Player[] {
     const games = rng.int(3, 10);
     (save.season.holdouts ??= {})[p.id] = games;
     out.push(p);
-    save.inbox.unshift(
+    addMessage(save, 
       note(
         save,
         `holdout-${p.id}`,
