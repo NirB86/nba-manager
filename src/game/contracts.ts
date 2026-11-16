@@ -67,6 +67,7 @@ function askingSalary(save: SaveGame, p: Player, firstSeason: number): number {
   const pers = p.personality;
   ask *= 1 + (pers.ego - 10) * 0.012 - (p.teamId === save.career.teamId ? (pers.loyalty - 10) * 0.01 : 0);
   // Unsigned free agents come down the longer they wait, as they do for AI teams (to 60%; in-season, they take 60%).
+  if (!p.teamId && save.season.boughtOut?.includes(p.id) && !save.offseason) return cba.minimumSalary;
   if (!p.teamId) ask *= 1 - (save.offseason?.stage === 'free-agency' ? Math.min(0.4, save.offseason.faDay * 0.1) : save.offseason ? 0 : 0.4);
   const max = maxSalaryShare(p.experience + ahead) * cba.salaryCap;
   return Math.max(cba.minimumSalary, Math.round(Math.min(max, ask) / 10_000) * 10_000);

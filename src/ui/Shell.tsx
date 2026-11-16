@@ -61,7 +61,7 @@ function AchievementToast() {
   const first = fresh[0] ? achievementById.get(fresh[0].id) : undefined;
   useEffect(() => {
     if (!first) return;
-    const t = setTimeout(() => update(markAchievementsSeen), 6000);
+    const t = setTimeout(() => update(markAchievementsSeen), 4000);
     return () => clearTimeout(t);
   }, [first?.id]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!first) return null;

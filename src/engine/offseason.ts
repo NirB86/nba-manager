@@ -190,22 +190,41 @@ export function talentLevel(league: LeagueFile, n = league.teams.length * 12): n
   return top.length ? top.reduce((s, v) => s + v, 0) / top.length : 0;
 }
 
+/** The shape of the league's ratings: overall at 21 evenly spaced ranks among its best players (12 a team), best first. */
+export function ratingShape(league: LeagueFile, n = league.teams.length * 12): number[] {
+  const top = league.players.map(playerOverall).sort((a, b) => b - a).slice(0, n);
+  if (!top.length) return [];
+  return Array.from({ length: 21 }, (_, i) => top[Math.min(top.length - 1, Math.round((i / 20) * (top.length - 1)))]!);
+}
+
 /**
- * Keep ratings from drifting over many seasons: if the league's talent level
- * has moved away from `target`, every player shifts by the same small amount
- * (at most 2 points a summer), so the order and gaps between players stay.
+ * Keep ratings from drifting over many seasons. Each player is compared with
+ * the rating his rank had when the career began (`shape`, from ratingShape),
+ * and moves half-way toward it, at most 2 points a summer. The order of
+ * players never changes, and stars stay as rare (and as good) as they were.
  */
-export function rebalanceRatings(league: LeagueFile, target: number, rng: Rng): number {
-  const delta = Math.max(-2, Math.min(2, target - talentLevel(league)));
-  if (Math.abs(delta) < 0.3) return 0;
+export function rebalanceRatings(league: LeagueFile, shape: number[], rng: Rng): void {
+  if (shape.length < 2) return;
   const year = league.meta.season;
-  for (const p of league.players) {
+  const n = league.teams.length * 12;
+  const ranked = [...league.players].sort((a, b) => playerOverall(b) - playerOverall(a));
+  const targetAt = (rank: number) => {
+    const x = (Math.min(rank, n - 1) / (n - 1)) * (shape.length - 1);
+    const i = Math.floor(x);
+    const f = x - i;
+    return shape[i]! * (1 - f) + (shape[Math.min(shape.length - 1, i + 1)] ?? shape[i]!) * f;
+  };
+  // Below the top group, players move with the last rank of the group.
+  const tail = targetAt(n - 1) - playerOverall(ranked[Math.min(ranked.length - 1, n - 1)]!);
+  ranked.forEach((p, rank) => {
     const before = playerOverall(p);
+    const gap = rank < n ? targetAt(rank) - before : tail;
+    const delta = Math.max(-2, Math.min(2, gap / 2));
+    if (Math.abs(delta) < 0.5) return;
     p.attributes = shiftAttributes(p, before + delta, playerAge(p, year), rng);
     const after = playerOverall(p);
     p.potential = Math.max(after, Math.min(99, p.potential + (after - before)));
-  }
-  return delta;
+  });
 }
 
 /** Players who retire this summer. Returns them; the caller removes them. */

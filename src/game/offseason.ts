@@ -22,7 +22,7 @@ import {
   assignJersey,
   fixJerseys,
   rebalanceRatings,
-  talentLevel,
+  ratingShape,
   standings,
   signDraftedPlayer,
   teamName,
@@ -373,8 +373,9 @@ export function startNewSeason(original: SaveGame, rng = new Rng(newSeed())): Sa
   const filledMine = fillRoster(league, me);
   fixJerseys(league);
   // Ratings stay on the same scale year after year (the level the career started at).
-  save.ratingTarget ??= talentLevel(league);
-  rebalanceRatings(league, save.ratingTarget, rng);
+  if (!save.ratingShape?.length) save.ratingShape = ratingShape(league);
+  rebalanceRatings(league, save.ratingShape, rng);
+  meetFloor(league, me);
   // Unsigned players drift out of the league (overseas, retirement): keep the best 90 or so, young talent first.
   const keep = new Set(
     league.players
@@ -416,6 +417,25 @@ export function startNewSeason(original: SaveGame, rng = new Rng(newSeed())): Sa
     );
   }
   return save;
+}
+
+/**
+ * AI teams under the salary floor at training camp renegotiate: the shortfall
+ * goes to their best players' salaries for this season, as real teams do.
+ */
+function meetFloor(league: LeagueFile, me: string) {
+  const year = league.meta.season;
+  const floor = salaryFloor(league.settings);
+  for (const t of league.teams) {
+    if (t.id === me) continue;
+    const short = floor - teamPayroll(league, t.id, year);
+    if (short <= 0) continue;
+    const top = rosterOf(league, t.id).filter((p) => p.contract && p.contract.kind !== 'two-way' && p.contract.kind !== 'rookie').slice(0, 3);
+    for (const p of top) {
+      const y = p.contract!.years.find((x) => x.season === year);
+      if (y) y.salary += Math.round(short / top.length);
+    }
+  }
 }
 
 /** A free agent signs with a team: salary rising 5% a year. */

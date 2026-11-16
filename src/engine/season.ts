@@ -64,6 +64,9 @@ export interface SeasonState {
   injuries?: Record<string, Injury>;
   /** Season awards, set when the regular season ends (Finals MVP after the Finals). */
   awards?: SeasonAwards;
+  /** Veterans bought out after the trade deadline (they sign for the minimum). */
+  boughtOut?: string[];
+  buyoutsDone?: boolean;
   /** Team morale's effect on play, by team id (set by the game each week; missing = neutral). */
   moraleEdge?: Record<string, number>;
   /** Depth charts set by coaches (the user), by team id. Teams without one use the default rotation. */

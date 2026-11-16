@@ -7,6 +7,7 @@ import { weeklyMarket } from './market';
 import { checkAchievements } from './achievements';
 import { weeklyDemands } from './demands';
 import { updateMoraleEdge } from './staff';
+import { weeklyAiMoves } from './ai-moves';
 import { weeklyScouting } from './draft-scouting';
 import { maybePress } from './press';
 import { assessTax, financeDay, ownerVerdict } from './finance';
@@ -71,6 +72,7 @@ function afterDay(save: SaveGame, report: DayReport, rng: Rng, before: { phase: 
       weeklyDemands(save, rng);
       weeklyScouting(save);
       updateMoraleEdge(save);
+      weeklyAiMoves(save, rng);
     }
     maybePress(save, rng);
   }

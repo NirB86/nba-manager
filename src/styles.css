@@ -1128,3 +1128,11 @@ tr.focus-row td:first-child { box-shadow: inset 3px 0 0 var(--team); }
 
 .good-text { color: var(--good); font-weight: 700; }
 .bad-text { color: var(--bad); font-weight: 700; }
+
+/* Phones: the achievement toast sits at the top, compact, out of the way of buttons. */
+@media (max-width: 899px) {
+  .ach-toast { bottom: auto; top: calc(8px + env(safe-area-inset-top)); grid-template-columns: 32px 1fr; padding: 8px 12px; animation: ach-drop 0.35s ease-out; }
+  .ach-toast .small { display: none; }
+  .ach-toast .ach-icon { font-size: 24px; }
+  @keyframes ach-drop { from { transform: translate(-50%, -20px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+}

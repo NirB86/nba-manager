@@ -8,7 +8,7 @@ import { notify } from '../notify';
 import { ownerExpectation } from '../../game/career';
 import { conferenceRank, leagueWire, ownerMood } from '../../game/news';
 import { morale, MORALE_LABEL, type MoraleLevel } from '../../game/morale';
-import type { SaveGame } from '../../storage/saves';
+import { addMessage, type SaveGame } from '../../storage/saves';
 import { useCareer } from '../career-context';
 import { photoSrc, Card, MoodPill, Pill, PlayerPhoto, TeamBadge, LeagueLogo } from '../components';
 import { money } from '../format';
@@ -58,6 +58,16 @@ function MatchupBoard() {
   /** Play game: instantly, or in 2D (asking first when the career is set to ask). */
   const playGame = () => {
     const sim = save.career.simMode;
+    // A live game you left part-way (reload, closed app) is finished without you: it cannot be restarted.
+    if (save.liveGame && save.liveGame === nextUserGame(save)?.id) {
+      update((s) => {
+        const next = { ...s, inbox: [...s.inbox] };
+        addMessage(next, { id: `left-${s.liveGame}`, from: 'Head coach', subject: 'We finished the game without you', body: 'You left the live game before the final buzzer, so the rest of it was played out. A live game cannot be started over.', date: dateLabel(s.season), read: false });
+        return next;
+      });
+      void run('next-game');
+      return;
+    }
     if (sim === 'ask') setChooser(true);
     else if (sim === 'watch') void watch(save.career.watchMode ?? 'full');
     else void run('next-game');
@@ -76,6 +86,8 @@ function MatchupBoard() {
       update(() => ready);
       const g = nextUserGame(ready);
       if (!g) return;
+      // Remember the game is under way, so leaving it does not allow a do-over.
+      update(() => ({ ...ready, liveGame: g.id }));
       setRecap(null);
       setCast({ save: ready, gameId: g.id, homeId: g.home, awayId: g.away, mode });
     } finally {
@@ -85,7 +97,7 @@ function MatchupBoard() {
   const finishLive = async (result: GameResult) => {
     if (!cast) return;
     const done = await finishLiveGame(cast.save, cast.gameId, result);
-    update(() => done);
+    update(() => ({ ...done, liveGame: undefined }));
     setRecap(cast.gameId);
     setCast(null);
   };
@@ -94,7 +106,7 @@ function MatchupBoard() {
     setBusy({ done: 0, total: 1, label: 'Starting…' });
     try {
       const result = await advance(save, target, setBusy);
-      update(() => result);
+      update(() => ({ ...result, liveGame: undefined }));
       if (target !== 'next-game') {
         const fresh = result.inbox.filter((m) => !m.read && !save.inbox.some((x) => x.id === m.id));
         notify('Simulation finished', fresh[0] ? `${fresh[0].subject}${fresh.length > 1 ? ` (+${fresh.length - 1} more)` : ''}` : dateLabel(result.season));

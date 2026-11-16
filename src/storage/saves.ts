@@ -83,8 +83,10 @@ export interface SaveGame {
   press?: PressConference | null;
   /** Draft scouting: where your scouts are looking, and what they know about each prospect. */
   draftScouting?: DraftScouting;
-  /** The league's talent level when the career started: ratings are kept on this scale. */
-  ratingTarget?: number;
+  /** The league's rating distribution when the career started (see ratingShape): ratings are kept on this scale. */
+  ratingShape?: number[];
+  /** A live game that was started and not finished (it is then played out, never restarted). */
+  liveGame?: string;
   /** Achievements unlocked in this career, oldest first. */
   achievements?: Unlocked[];
 }
