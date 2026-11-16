@@ -86,7 +86,7 @@ function AvailableStaff() {
             <tr>
               <th>Name</th>
               <th>Role</th>
-              <th className="num">Key rating</th>
+              <th className="num">Rtg</th>
               <th className="num">Asks</th>
             </tr>
           </thead>
@@ -98,7 +98,7 @@ function AvailableStaff() {
                     {fullName(s)}
                   </a>
                 </td>
-                <td>{ROLE_LABEL[s.role]}</td>
+                <td>{ROLE_LABEL[s.role].replace('Assistant coach', 'Assistant').replace('Player development', 'Development')}</td>
                 <td className={`num ${attrTone(s.ratings[KEY_RATINGS[s.role][0]!])}-text`}>{s.ratings[KEY_RATINGS[s.role][0]!]}</td>
                 <td className="num">{money(staffAsk(s))}</td>
               </tr>
