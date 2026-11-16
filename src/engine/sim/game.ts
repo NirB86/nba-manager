@@ -77,6 +77,8 @@ export interface SimTeam {
   players: Player[];
   /** The coach's depth chart; without one the best players start and play most. */
   depth?: DepthChart;
+  /** Make-probability bonus (coaching and team morale), about -0.02..0.02. */
+  edge?: number;
 }
 
 /** Starters, bench order and target minutes set by the coach. */
@@ -482,8 +484,8 @@ export class LiveGame {
   ) {
     this.home = new Side(homeTeam);
     this.away = new Side(awayTeam);
-    this.home.form = rng.normal(0, 0.018);
-    this.away.form = rng.normal(0, 0.018);
+    this.home.form = rng.normal(0, 0.018) + (homeTeam.edge ?? 0);
+    this.away.form = rng.normal(0, 0.018) + (awayTeam.edge ?? 0);
     this.offense = rng.chance(0.5) ? this.home : this.away;
   }
 

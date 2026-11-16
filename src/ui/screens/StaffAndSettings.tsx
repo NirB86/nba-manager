@@ -7,6 +7,7 @@ import { attrTone, money, seasonLabel } from '../format';
 import { href } from '../router';
 import { Icon, PageHeader } from '../Shell';
 import { MusicSettings } from '../MusicControls';
+import { fireStaff, hireStaff, staffAsk, staffPayroll } from '../../game/staff';
 import { ALBUM } from '../music';
 import { enableNotify, notifySupported, notifyWanted } from '../notify';
 
@@ -29,7 +30,7 @@ export function Staff() {
 
   return (
     <>
-      <PageHeader title="Staff" subtitle="Tap a name for the full profile · hiring and firing arrives in a coming update" />
+      <PageHeader title="Staff" subtitle={`Tap a name for the full profile, to hire or let go · staff payroll ${money(staffPayroll(save))} a season`} />
       <div className="table-wrap">
         <table className="table">
           <thead>
@@ -67,7 +68,46 @@ export function Staff() {
         </table>
       </div>
       <p className="muted small">Ratings are 1-20: TAC tactics, DEV development, MOT motivation, JUD judgment, SCO scouting, MED medical.</p>
+      <AvailableStaff />
     </>
+  );
+}
+
+/** Staff without a team, best first in each role, with what they would cost. */
+function AvailableStaff() {
+  const { save } = useCareer();
+  const free = save.league.staff.filter((s) => !s.teamId).sort((a, b) => ROLE_ORDER.indexOf(a.role) - ROLE_ORDER.indexOf(b.role) || staffAsk(b) - staffAsk(a));
+  if (!free.length) return null;
+  return (
+    <Card title="Available to hire">
+      <div className="table-wrap">
+        <table className="table compact">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Role</th>
+              <th className="num">Key rating</th>
+              <th className="num">Asks</th>
+            </tr>
+          </thead>
+          <tbody>
+            {free.map((s) => (
+              <tr key={s.id} className="clickable" onClick={() => (window.location.hash = href('c', save.id, 'staff', s.id))}>
+                <td>
+                  <a className="row-link" href={href('c', save.id, 'staff', s.id)} onClick={(e) => e.stopPropagation()}>
+                    {fullName(s)}
+                  </a>
+                </td>
+                <td>{ROLE_LABEL[s.role]}</td>
+                <td className={`num ${attrTone(s.ratings[KEY_RATINGS[s.role][0]!])}-text`}>{s.ratings[KEY_RATINGS[s.role][0]!]}</td>
+                <td className="num">{money(staffAsk(s))}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <p className="muted small">Each team has 1 head coach, 2 assistants, 2 scouts, 1 medical and 1 development coach. Let someone go to open a spot.</p>
+    </Card>
   );
 }
 
@@ -356,6 +396,7 @@ export function StaffPage({ staffId }: { staffId: string }) {
               <dd>{s.born.country}</dd>
             </dl>
           </Card>
+          <StaffActions staff={s} />
           <Card title="Contract">
             {s.contract ? (
               <dl className="facts">
@@ -375,8 +416,14 @@ export function StaffPage({ staffId }: { staffId: string }) {
             <Card title="Impact on your team">
               <p className="small">
                 {s.role === 'SCOUT'
-                  ? 'Your best scout sets how precise the potential estimates on player pages are. Higher judgment and scouting give narrower ranges.'
-                  : 'Coaching, development and medical effects come with the player development and injury systems in a coming update.'}
+                  ? 'Your best scout sets how precise potential estimates are, and how fast your draft scouting learns about prospects. Higher judgment and scouting are better.'
+                  : s.role === 'HC'
+                    ? 'Tactics improve your team\'s shooting in every game (about +-1% at the extremes). Motivation lifts team morale, which also shows on the court.'
+                    : s.role === 'AC'
+                      ? 'Assistants\' tactics add a smaller boost to your team in games.'
+                      : s.role === 'MED'
+                        ? 'Medical sets how quickly injured players return.'
+                        : 'Development sets how much your young players improve each summer.'}
               </p>
             </Card>
           )}
@@ -473,6 +520,39 @@ function NotifySettings() {
         </button>
         <span className="muted small">Tells you when a long sim finishes while the app is in the background. Unread inbox messages show on the app icon when the game is installed.</span>
       </div>
+      {msg && <p className="small">{msg}</p>}
+    </Card>
+  );
+}
+
+/** Hire (staff without a team) or let go (your staff). */
+function StaffActions({ staff: s }: { staff: StaffMember }) {
+  const { save, update } = useCareer();
+  const [msg, setMsg] = useState<string | null>(null);
+  const mine = s.teamId === save.career.teamId;
+  if (!mine && s.teamId) return null;
+  const run = (fn: () => ReturnType<typeof hireStaff>) => {
+    const r = fn();
+    setMsg(r.message);
+    if (r.ok) update(() => r.save);
+  };
+  return (
+    <Card title={mine ? 'Staff decision' : 'Hire'}>
+      {mine ? (
+        <button
+          type="button"
+          className="btn"
+          onClick={() => {
+            if (window.confirm(`Let ${fullName(s)} go? This season's salary (${money(s.contract?.salary ?? 0)}) is paid as severance.`)) run(() => fireStaff(save, s.id));
+          }}
+        >
+          Let him go
+        </button>
+      ) : (
+        <button type="button" className="btn btn-primary" onClick={() => run(() => hireStaff(save, s.id))}>
+          Hire: 3 years at {money(staffAsk(s))}
+        </button>
+      )}
       {msg && <p className="small">{msg}</p>}
     </Card>
   );

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { LiveGame, Rng, availablePlayers, newSeed, type CoachMove, type GameResult, type LiveState, type PlayEvent, type Player, type Tactics, type Team } from '../../engine';
+import { LiveGame, Rng, availablePlayers, newSeed, teamEdge, type CoachMove, type GameResult, type LiveState, type PlayEvent, type Player, type Tactics, type Team } from '../../engine';
 import type { SaveGame } from '../../storage/saves';
 import { photoSrc, TeamBadge } from '../components';
 import { hush, play, say, setSfx, sfxOn } from '../sfx';
@@ -227,7 +227,8 @@ export function GameCast({ save, homeId, awayId, mode, onFinish }: { save: SaveG
   const game = useRef<LiveGame | null>(null);
   if (!game.current) {
     const roster = (id: string) => availablePlayers(league, save.season, id);
-    game.current = new LiveGame(new Rng(newSeed()), { teamId: homeId, players: roster(homeId), depth: save.season.depth?.[homeId] }, { teamId: awayId, players: roster(awayId), depth: save.season.depth?.[awayId] });
+    const side = (id: string) => ({ teamId: id, players: roster(id), depth: save.season.depth?.[id], edge: teamEdge(league, save.season, id) });
+    game.current = new LiveGame(new Rng(newSeed()), side(homeId), side(awayId));
     game.current.enableAiCoach(homeId === me ? 'away' : 'home');
   }
   const live = game.current;

@@ -6,6 +6,7 @@ import { addMessage, type InboxMessage, type SaveGame } from '../storage/saves';
 import { weeklyMarket } from './market';
 import { checkAchievements } from './achievements';
 import { weeklyDemands } from './demands';
+import { updateMoraleEdge } from './staff';
 import { weeklyScouting } from './draft-scouting';
 import { maybePress } from './press';
 import { assessTax, financeDay, ownerVerdict } from './finance';
@@ -69,6 +70,7 @@ function afterDay(save: SaveGame, report: DayReport, rng: Rng, before: { phase: 
       weeklyMarket(save, rng);
       weeklyDemands(save, rng);
       weeklyScouting(save);
+      updateMoraleEdge(save);
     }
     maybePress(save, rng);
   }

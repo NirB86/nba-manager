@@ -2,7 +2,8 @@
 
 import { conferenceStandings, fullName, standings, teamRating, teamSummaries } from '../engine';
 import type { SaveGame } from '../storage/saves';
-import { TIER_TARGET, ownerExpectation } from './career';
+import { TIER_TARGET } from './career';
+import { seasonGoal } from './staff';
 
 export function leagueWire(save: SaveGame): string[] {
   const { league, season } = save;
@@ -52,7 +53,7 @@ export type Mood = 'Thrilled' | 'Pleased' | 'Patient' | 'Concerned' | 'Furious';
 
 /** How the owner feels about the season so far, against their goal. */
 export function ownerMood(save: SaveGame): { mood: Mood; goal: string; tone: 'good' | 'neutral' | 'bad' } {
-  const exp = ownerExpectation(save.league, save.career.teamId);
+  const exp = seasonGoal(save);
   const row = standings(save.league, save.season.games).find((r) => r.teamId === save.career.teamId);
   const gp = row ? row.w + row.l : 0;
   if (!row || gp < 5) return { mood: 'Patient', goal: exp.goal, tone: 'neutral' };

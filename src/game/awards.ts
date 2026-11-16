@@ -17,7 +17,8 @@ import {
   type StatTotals,
 } from '../engine';
 import type { InboxMessage, SaveGame } from '../storage/saves';
-import { TIER_ROUND, TIER_TARGET, ownerExpectation } from './career';
+import { TIER_ROUND, TIER_TARGET } from './career';
+import { seasonGoal } from './staff';
 
 export interface LeagueSeasonRecord {
   season: number;
@@ -257,7 +258,7 @@ export function seasonReview(save: SaveGame): string {
   const w = row?.w ?? 0;
   const l = row?.l ?? 0;
   const deepest = season.series.filter((s) => s.top.teamId === me || s.bottom.teamId === me).reduce((m, s) => Math.max(m, s.round + (s.winner === me ? 1 : 0)), -1);
-  const exp = ownerExpectation(league, me);
+  const exp = seasonGoal(save);
   const expected = { label: exp.goal, wins: Math.round(TIER_TARGET[exp.tier] * (w + l || 82)) };
   const goalRound = TIER_ROUND[exp.tier];
   // Score: wins against expectation, plus playoff progress against the goal.

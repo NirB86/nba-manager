@@ -55,7 +55,7 @@ export function createCareer(league: LeagueFile, career: CareerSettings, name: s
     name,
     createdAt: now,
     updatedAt: now,
-    career,
+    career: { ...career, goal: (() => { const e = ownerExpectation(league, career.teamId); return { season: league.meta.season, teamId: career.teamId, tier: e.tier, goal: e.goal, rank: e.rank }; })() },
     inbox: welcomeMessages(league, career),
     league,
     season: newSeason(league, new Rng(newSeed())),

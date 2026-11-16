@@ -64,6 +64,8 @@ export interface SeasonState {
   injuries?: Record<string, Injury>;
   /** Season awards, set when the regular season ends (Finals MVP after the Finals). */
   awards?: SeasonAwards;
+  /** Team morale's effect on play, by team id (set by the game each week; missing = neutral). */
+  moraleEdge?: Record<string, number>;
   /** Depth charts set by coaches (the user), by team id. Teams without one use the default rotation. */
   depth?: Record<string, DepthChart>;
   /** The All-Star Game, played just past the middle of the regular season. */
@@ -363,9 +365,23 @@ export function availablePlayers(league: LeagueFile, season: SeasonState, teamId
   return healthy.length >= 8 ? healthy : all;
 }
 
+/**
+ * A team's edge on the floor: its head coach's tactics (and the assistants'),
+ * plus team morale. About +-1.5% on shooting at the extremes, worth a few
+ * points a game.
+ */
+export function teamEdge(league: LeagueFile, season: SeasonState | undefined, teamId: string): number {
+  const staff = league.staff.filter((s) => s.teamId === teamId);
+  const hc = staff.find((s) => s.role === 'HC')?.ratings.tactics ?? 10;
+  const acs = staff.filter((s) => s.role === 'AC').map((s) => s.ratings.tactics);
+  const ac = acs.length ? acs.reduce((a, b) => a + b, 0) / acs.length : 10;
+  return (hc - 10) * 0.0011 + (ac - 10) * 0.0004 + (season?.moraleEdge?.[teamId] ?? 0);
+}
+
 function playGame(league: LeagueFile, rng: Rng, g: ScheduledGame, log?: PlayEvent[], played?: GameResult, season?: SeasonState): GameResult {
   const roster = (teamId: string) => (season ? availablePlayers(league, season, teamId) : league.players.filter((p) => p.teamId === teamId));
-  const result = played ?? simulateGame(rng, { teamId: g.home, players: roster(g.home), depth: season?.depth?.[g.home] }, { teamId: g.away, players: roster(g.away), depth: season?.depth?.[g.away] }, log);
+  const side = (teamId: string) => ({ teamId, players: roster(teamId), depth: season?.depth?.[teamId], edge: teamEdge(league, season, teamId) });
+  const result = played ?? simulateGame(rng, side(g.home), side(g.away), log);
   g.hs = result.home.score;
   g.as = result.away.score;
   g.ot = result.overtimes;

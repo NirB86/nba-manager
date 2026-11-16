@@ -5,6 +5,7 @@
 import { displayRating, playerOverall, rosterOf, salaryFloor, standings, teamPayroll, type CbaSettings, type DayReport, type Market } from '../engine';
 import { addMessage, type Difficulty, type InboxMessage, type SaveGame } from '../storage/saves';
 import { ownerExpectation } from './career';
+import { seasonGoal, setSeasonGoal, staffPayroll } from './staff';
 import { ownerMood } from './news';
 
 export const ARENA_CAPACITY = 18_500;
@@ -79,7 +80,7 @@ export function luxuryTaxBill(cba: CbaSettings, payroll: number): number {
 export function ownerBudget(save: SaveGame): number {
   const team = save.league.teams.find((t) => t.id === save.career.teamId);
   const cba = save.league.settings;
-  const exp = ownerExpectation(save.league, save.career.teamId);
+  const exp = seasonGoal(save);
   const market = team?.market === 'large' ? 1.12 : team?.market === 'small' ? 0.98 : 1.04;
   const ambition = exp.tier === 'title' ? 0.06 : exp.tier === 'contender' ? 0.03 : exp.tier === 'rebuild' ? -0.06 : 0;
   return Math.round(cba.luxuryTax * (market + ambition));
@@ -125,8 +126,8 @@ export function financeDay(save: SaveGame, report: DayReport, dayBefore: number)
       // National media money and payroll are paid out per game.
       f.ledger.media += Math.round((league.settings.salaryCap * 0.95) / regularGames);
       f.ledger.payroll += Math.round(teamPayroll(league, me, league.meta.season) / regularGames);
-      // Staff, travel and the front office: about 15% of the cap a season.
-      f.ledger.ops = (f.ledger.ops ?? 0) + Math.round((league.settings.salaryCap * 0.15) / regularGames);
+      // Staff salaries, plus travel and the front office (about 5% of the cap a season).
+      f.ledger.ops = (f.ledger.ops ?? 0) + Math.round((staffPayroll(save) + league.settings.salaryCap * 0.05) / regularGames);
     }
     if (game.home !== me) continue;
     const price = playoff ? Math.round(f.ticketPrice * 1.6) : f.ticketPrice;
@@ -232,6 +233,7 @@ export function acceptJob(original: SaveGame, teamId: string): SaveGame {
   save.career.jobs = [...(save.career.jobs ?? []), { teamId: old?.id ?? '', until: save.league.meta.season, fired: !!original.career.fired }];
   save.jobOffers = [];
   save.finance = { ticketPrice: BASE_PRICE[team.market], ledger: emptyLedger(save.league.meta.season), history: [], confidence: 55 };
+  setSeasonGoal(save);
   addMessage(save, msg(save, 'new-job', 'Owner', `Welcome to the ${team.name}`, `${ownerExpectation(save.league, teamId).goal}: that is what I expect. The draft and free agency are coming up.`));
   return save;
 }

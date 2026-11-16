@@ -256,7 +256,7 @@ function ClubBooks() {
     ['Player salaries', l.payroll],
     ['Luxury tax', l.tax],
     ['Salary floor shortfall', l.floor ?? 0],
-    ['Operations', l.ops ?? 0],
+    ['Staff and operations', l.ops ?? 0],
   ];
   return (
     <>

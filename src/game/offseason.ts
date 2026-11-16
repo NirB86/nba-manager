@@ -39,6 +39,7 @@ import { MLE_SHARE } from './contracts';
 import { induct, recordPlayerSeasons } from './history';
 import { rollFinances } from './finance';
 import { holdouts } from './demands';
+import { renewStaff, setSeasonGoal } from './staff';
 
 export type OffseasonStage = 'draft' | 'free-agency' | 'camp';
 
@@ -394,6 +395,8 @@ export function startNewSeason(original: SaveGame, rng = new Rng(newSeed())): Sa
   rollFinances(save);
   save.demands = { requests: {}, mods: [] };
   save.press = null;
+  renewStaff(save);
+  setSeasonGoal(save);
   holdouts(save, rng);
 
   const mine = rosterOf(league, me);

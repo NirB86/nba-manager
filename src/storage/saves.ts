@@ -33,6 +33,8 @@ export interface CareerSettings {
   reviews?: { season: number; grade: string; wins: number; losses: number; expectation: string }[];
   /** Fired by the owner: pick a new job from the offers. */
   fired?: boolean;
+  /** The owner's goal for the current season, fixed when it starts. */
+  goal?: { season: number; teamId: string; tier: 'title' | 'contender' | 'playoffs' | 'play-in' | 'rebuild'; goal: string; rank: number };
   /** Teams you ran before, and the league year you left. */
   jobs?: { teamId: string; until: number; fired?: boolean }[];
 }

@@ -1125,3 +1125,6 @@ tr.focus-row td:first-child { box-shadow: inset 3px 0 0 var(--team); }
 .sheet-card { border-top: 4px solid var(--warn); }
 .rfa-tag { margin-left: 6px; font-size: 10px; }
 @media (max-width: 480px) { .sheet-list li { grid-template-columns: auto 1fr; } .sheet-list li > :last-child { grid-column: 1 / -1; justify-content: flex-start; } }
+
+.good-text { color: var(--good); font-weight: 700; }
+.bad-text { color: var(--bad); font-weight: 700; }

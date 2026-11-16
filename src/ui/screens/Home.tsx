@@ -218,6 +218,15 @@ function LockerRoom() {
     <section className="locker">
       <div className="section-head">
         <h2>Locker room</h2>
+        {(() => {
+          const e = save.season.moraleEdge?.[save.career.teamId];
+          if (!e) return null;
+          return (
+            <span className={`small ${e > 0 ? 'good-text' : 'bad-text'}`} title="Team morale (and your head coach's motivation) affects shooting in every game. Updated weekly.">
+              Chemistry {e > 0 ? '+' : ''}{(e * 100).toFixed(1)}% shooting
+            </span>
+          );
+        })()}
       </div>
       <div className="locker-bar" role="img" aria-label={order.map((l) => `${count(l)} ${MORALE_LABEL[l].toLowerCase()}`).join(', ')}>
         {order.map((l) => (count(l) ? <span key={l} className={`mood-${l}`} style={{ flex: count(l) }} /> : null))}
