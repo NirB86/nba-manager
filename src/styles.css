@@ -1115,3 +1115,5 @@ tr.focus-row td:first-child { box-shadow: inset 3px 0 0 var(--team); }
 .ach-grid .ach-icon { font-size: 26px; }
 .ach-grid small { display: block; color: var(--text-3); }
 .notify-row { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; }
+
+.short-roster { display: block; border-left-color: var(--bad) !important; margin: 0 0 12px; color: inherit; text-decoration: none; }

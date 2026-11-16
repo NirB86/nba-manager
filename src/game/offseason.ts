@@ -19,12 +19,16 @@ import {
   retirements,
   rollOverLeagueYear,
   rosterOf,
+  assignJersey,
+  fixJerseys,
+  standings,
   signDraftedPlayer,
   teamName,
   teamPayroll,
   teamStrategy,
   trimRoster,
   type DraftSlot,
+  type LeagueFile,
   type Player,
 } from '../engine';
 import type { InboxMessage, SaveGame } from '../storage/saves';
@@ -207,7 +211,22 @@ function aiBudget(save: SaveGame, teamId: string): { limit: number; mle: boolean
   return { limit: cba.minimumSalary, mle: false };
 }
 
-/** One day of free agency: AI teams sign the best players they can afford. */
+/** What a free agent asks today: his market value, coming down the longer he waits (to 60% on the last day). */
+export function askToday(save: SaveGame, p: Player): number {
+  const { league } = save;
+  const year = league.meta.season;
+  const market = marketSalary(league.settings, playerOverall(p), playerAge(p, year), p.experience);
+  const day = save.offseason?.faDay ?? FA_DAYS;
+  const drop = Math.min(0.4, day * 0.1);
+  return Math.max(league.settings.minimumSalary, Math.round(market * (1 - drop)));
+}
+
+/**
+ * One day of free agency. Each free agent (best first) hears offers from the
+ * teams that need players and can pay what he asks, within their real budget
+ * (cap room, the mid-level exception, or the minimum for minimum-level players).
+ * He takes the best offer: money first, a winning team breaks a close call.
+ */
 export function freeAgencyDay(original: SaveGame, rng = new Rng(newSeed())): SaveGame {
   const o = original.offseason;
   if (!o || o.stage !== 'free-agency') return original;
@@ -215,28 +234,53 @@ export function freeAgencyDay(original: SaveGame, rng = new Rng(newSeed())): Sav
   const { league } = save;
   const year = league.meta.season;
   const me = save.career.teamId;
+  const cba = league.settings;
   const signed: string[] = [];
-  const teams = rng.shuffle(league.teams.map((t) => t.id).filter((t) => t !== me));
-  for (const teamId of teams) {
-    const size = rosterOf(league, teamId).filter((p) => p.contract?.kind !== 'two-way').length;
-    if (size >= league.settings.rosterMax || (size >= 14 && rng.chance(0.6))) continue;
-    // Each team signs up to one player a day (two when short-handed).
-    for (let n = 0; n < (size < 12 ? 2 : 1); n++) {
-      const budget = aiBudget(save, teamId);
-      const pool = league.players
-        .filter((p) => !p.teamId && save.offseason!.birdRights[p.id] !== me)
-        .map((p) => ({ p, ask: marketSalary(league.settings, playerOverall(p), playerAge(p, year), p.experience) }))
-        .filter((x) => x.ask <= budget.limit * 1.05 || budget.limit === league.settings.minimumSalary)
-        .sort((a, b) => playerValue(league, b.p, teamStrategy(league, teamId)) - playerValue(league, a.p, teamStrategy(league, teamId)));
-      const pick = pool[0];
-      if (!pick) break;
-      const salary = Math.min(pick.ask, budget.limit);
-      const years = playerAge(pick.p, year) <= 28 ? rng.int(1, 4) : rng.int(1, 2);
-      pick.p.teamId = teamId;
-      pick.p.contract = { years: Array.from({ length: years }, (_, i) => ({ season: year + i, salary: Math.round(salary * 1.05 ** i) })), option: null, kind: salary <= league.settings.minimumSalary ? 'minimum' : 'standard', noTrade: false, signedSeason: year };
-      if (budget.mle) save.offseason!.mleUsed.push(teamId);
-      if (displayRating(playerOverall(pick.p)) >= 78) signed.push(`${fullName(pick.p)} to the ${league.teams.find((t) => t.id === teamId)?.name}`);
+  const lastDay = save.offseason!.faDay >= FA_DAYS - 1;
+  const winPct = new Map(standings(league, save.season.games).map((r) => [r.teamId, r.w + r.l ? r.w / (r.w + r.l) : 0.5]));
+  const signedToday = new Map<string, number>();
+  const size = (teamId: string) => rosterOf(league, teamId).filter((p) => p.contract?.kind !== 'two-way').length;
+  const pool = league.players
+    .filter((p) => !p.teamId && save.offseason!.birdRights[p.id] !== me)
+    .sort((a, b) => playerOverall(b) - playerOverall(a))
+    .slice(0, 120);
+  for (const p of pool) {
+    const ask = askToday(save, p);
+    const minLevel = ask <= cba.minimumSalary * 1.1;
+    const offers: { teamId: string; salary: number; mle: boolean; score: number }[] = [];
+    for (const t of league.teams) {
+      if (t.id === me) continue;
+      const n = size(t.id);
+      const today = signedToday.get(t.id) ?? 0;
+      if (n >= cba.rosterMax || today >= (n < 12 ? 2 : 1)) continue;
+      // A full-ish roster only adds players who would make its rotation.
+      if (n >= 13) {
+        const tenth = rosterOf(league, t.id)[9];
+        if (tenth && playerOverall(p) <= playerOverall(tenth)) continue;
+      }
+      const budget = aiBudget(save, t.id);
+      if (budget.limit === cba.minimumSalary && !minLevel) continue;
+      // Teams pay up to the ask (a little more for players they value), never past their budget.
+      const want = Math.round(ask * (1 + rng.normal(0.03, 0.04)));
+      const salary = Math.min(want, budget.limit);
+      if (salary < ask * (lastDay ? 0.75 : 0.95)) continue;
+      offers.push({ teamId: t.id, salary, mle: budget.mle, score: salary * (1 + 0.15 * (winPct.get(t.id) ?? 0.5)) * (1 + rng.normal(0, 0.03)) });
     }
+    const best = offers.sort((x, y) => y.score - x.score)[0];
+    if (!best) continue;
+    const years = playerAge(p, year) <= 28 ? rng.int(2, 4) : rng.int(1, 2);
+    p.teamId = best.teamId;
+    p.contract = {
+      years: Array.from({ length: years }, (_, i) => ({ season: year + i, salary: Math.round(best.salary * 1.05 ** i) })),
+      option: null,
+      kind: best.salary <= cba.minimumSalary ? 'minimum' : 'standard',
+      noTrade: false,
+      signedSeason: year,
+    };
+    assignJersey(league, p);
+    signedToday.set(best.teamId, (signedToday.get(best.teamId) ?? 0) + 1);
+    if (best.mle) save.offseason!.mleUsed.push(best.teamId);
+    if (displayRating(playerOverall(p)) >= 78) signed.push(`${fullName(p)} to the ${league.teams.find((t) => t.id === best.teamId)?.name} (${offers.length > 1 ? `${offers.length} offers, ` : ''}$${(best.salary / 1e6).toFixed(1)}M)`);
   }
   save.offseason!.faDay++;
   // Your own free agents shop around after a few days if you have not re-signed them.
@@ -270,22 +314,22 @@ export function startNewSeason(original: SaveGame, rng = new Rng(newSeed())): Sa
   const retiredIds = new Set(retired.map((p) => p.id));
   league.players = league.players.filter((p) => !retiredIds.has(p.id));
 
-  // AI teams: cut to the limit, then fill to the minimum with the best free agents on minimum deals.
+  // Every team, yours included, is cut to the limit and filled to the minimum with minimum-level free agents.
   const cutMine = trimRoster(league, me);
-  for (const t of league.teams) {
-    if (t.id === me) continue;
-    trimRoster(league, t.id);
-    let size = rosterOf(league, t.id).filter((p) => p.contract?.kind !== 'two-way').length;
-    while (size < league.settings.rosterMin) {
-      const fa = league.players.filter((p) => !p.teamId).sort((a, b) => playerOverall(b) - playerOverall(a))[0];
-      if (!fa) break;
-      fa.teamId = t.id;
-      fa.contract = { years: [{ season: year, salary: league.settings.minimumSalary }], option: null, kind: 'minimum', noTrade: false, signedSeason: year };
-      size++;
-    }
-  }
-  // Free agents nobody wanted for two years drift out of the league.
-  league.players = league.players.filter((p) => p.teamId || playerAge(p, year) <= 33 || rng.chance(0.5));
+  for (const t of league.teams) if (t.id !== me) trimRoster(league, t.id);
+  for (const t of league.teams) fillRoster(league, t.id);
+  const filledMine = fillRoster(league, me);
+  fixJerseys(league);
+  // Unsigned players drift out of the league (overseas, retirement): keep the best 90 or so, young talent first.
+  const keep = new Set(
+    league.players
+      .filter((p) => !p.teamId)
+      .sort((a, b) => playerOverall(b) + (playerAge(b, year) <= 23 ? (b.potential - playerOverall(b)) * 0.6 : 0) - (playerOverall(a) + (playerAge(a, year) <= 23 ? (a.potential - playerOverall(a)) * 0.6 : 0)))
+      .slice(0, 90)
+      .filter((p) => playerAge(p, year) <= 34)
+      .map((p) => p.id),
+  );
+  league.players = league.players.filter((p) => p.teamId || keep.has(p.id));
 
   const champion = save.season.champion ? league.teams.find((t) => t.id === save.season.champion) : undefined;
   const myRow = save.season.games.filter((g) => g.hs !== undefined && (g.home === me || g.away === me));
@@ -307,7 +351,7 @@ export function startNewSeason(original: SaveGame, rng = new Rng(newSeed())): Sa
   const down = risers.filter((x) => x.d < 0).slice(-3).map((x) => `${fullName(x.p)} ${x.d}`);
   const myRetired = retired.filter((p) => myBefore.has(p.id)).map(fullName);
   save.inbox.unshift(
-    msg(save, 'camp', 'Head coach', 'Training camp report', `${up.length ? `Improved over the summer: ${up.join(', ')}. ` : ''}${down.length ? `Lost a step: ${down.join(', ')}. ` : ''}${myRetired.length ? `Retired: ${myRetired.join(', ')}. ` : ''}${cutMine.length ? `To get down to ${league.settings.rosterMax}, we waived ${cutMine.map(fullName).join(', ')}. ` : ''}${retired.length} players retired around the league.`.trim()),
+    msg(save, 'camp', 'Head coach', 'Training camp report', `${up.length ? `Improved over the summer: ${up.join(', ')}. ` : ''}${down.length ? `Lost a step: ${down.join(', ')}. ` : ''}${myRetired.length ? `Retired: ${myRetired.join(', ')}. ` : ''}${cutMine.length ? `To get down to ${league.settings.rosterMax}, we waived ${cutMine.map(fullName).join(', ')}. ` : ''}${filledMine.length ? `To reach the ${league.settings.rosterMin}-man minimum, we signed ${filledMine.map(fullName).join(', ')} to one-year minimum deals. ` : ''}${retired.length} players retired around the league.`.trim()),
   );
   if (inducted.length) {
     save.inbox.unshift(
@@ -315,4 +359,25 @@ export function startNewSeason(original: SaveGame, rng = new Rng(newSeed())): Sa
     );
   }
   return save;
+}
+
+/** Sign minimum-level free agents (one year, the minimum) until the team has the minimum roster. Returns who signed. */
+export function fillRoster(league: LeagueFile, teamId: string): Player[] {
+  const year = league.meta.season;
+  const cba = league.settings;
+  const out: Player[] = [];
+  let size = rosterOf(league, teamId).filter((p) => p.contract?.kind !== 'two-way').length;
+  while (size < cba.rosterMin) {
+    // Players who would sign for about the minimum; the best of them.
+    const fa = league.players
+      .filter((p) => !p.teamId && marketSalary(cba, playerOverall(p), playerAge(p, year), p.experience) <= cba.minimumSalary * 1.6)
+      .sort((a, b) => playerOverall(b) - playerOverall(a))[0];
+    if (!fa) break;
+    fa.teamId = teamId;
+    fa.contract = { years: [{ season: year, salary: cba.minimumSalary }], option: null, kind: 'minimum', noTrade: false, signedSeason: year };
+    assignJersey(league, fa);
+    out.push(fa);
+    size++;
+  }
+  return out;
 }

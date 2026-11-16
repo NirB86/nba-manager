@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { CAP_STATUS_LABEL, capStatus, displayRating, rosterOf, playerOverall, teamPayroll, teamRating, type GameResult, type ImageCredit, type Player, type ScheduledGame } from '../../engine';
+import { CAP_STATUS_LABEL, availablePlayers, capStatus, rotation, displayRating, rosterOf, playerOverall, teamPayroll, teamRating, type GameResult, type ImageCredit, type Player, type ScheduledGame } from '../../engine';
 import { dateLabel, advance, advanceToGameDay, finishLiveGame, lastUserGame, nextUserGame, type AdvanceTarget, type Progress } from '../../game/advance';
 import { allStarDay } from '../../game/awards';
 import { acceptJob, declineOffers, financeView } from '../../game/finance';
@@ -295,14 +295,22 @@ export function Home({ messageId }: { messageId?: string }) {
   })();
 
   const headline = save.inbox.find((m) => !m.read) ?? save.inbox[0];
-  // Starting five: the best healthy players.
-  const five = roster.filter((p) => !save.season.injuries?.[p.id]).slice(0, 5);
+  // Starting five: what the coach will start tonight (your depth chart, injured and holdout players skipped).
+  const five = rotation(availablePlayers(league, save.season, team.id), save.season.depth?.[team.id])
+    .filter((r) => r.starter)
+    .map((r) => r.player);
   const hurt = roster.filter((p) => save.season.injuries?.[p.id]);
+  const short = roster.length < league.settings.rosterMin && !save.offseason;
 
   return (
     <>
       <MatchupBoard />
       <Ticker />
+      {short && (
+        <a className="notice short-roster" href={href('c', save.id, 'league')}>
+          <strong>Only {roster.length} players under contract.</strong> Teams need at least {league.settings.rosterMin}: sign free agents (League → Free agents). Your assistant fills the roster with minimum deals at training camp.
+        </a>
+      )}
       <JobOffers />
       <PressCard />
 

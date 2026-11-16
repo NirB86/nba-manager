@@ -2,7 +2,7 @@
 // dead money unless another team claims them off waivers), two-way
 // contracts, and converting a two-way player to a standard deal.
 
-import { fullName, playerAge, playerOverall, playerValue, rosterOf, salaryIn, teamPayroll, teamStrategy, type Player } from '../engine';
+import { assignJersey, fullName, playerAge, playerOverall, playerValue, rosterOf, salaryIn, teamPayroll, teamStrategy, type Player } from '../engine';
 import type { InboxMessage, SaveGame } from '../storage/saves';
 
 const note = (save: SaveGame, id: string, subject: string, body: string): InboxMessage => ({ id: `${id}-${Date.now()}`, from: 'Assistant GM', subject, body, date: save.offseason ? 'Offseason' : `Day ${save.season.day + 1}`, read: false });
@@ -47,6 +47,7 @@ export function waivePlayer(original: SaveGame, playerId: string): MoveResult {
   const by = p.contract?.kind === 'two-way' ? null : claimer(save, p);
   if (by) {
     p.teamId = by;
+    assignJersey(league, p);
     const team = league.teams.find((t) => t.id === by);
     save.inbox.unshift(note(save, `waive-${p.id}`, `${name} claimed off waivers`, `The ${team?.name} claimed ${name} and take over his contract, so none of his salary stays on our cap.`));
     return { ok: true, save, message: `${name} was claimed by the ${team?.name}: no dead money.` };
@@ -93,8 +94,7 @@ export function signTwoWay(original: SaveGame, playerId: string): MoveResult {
     noTrade: false,
     signedSeason: year,
   };
-  const taken = new Set(rosterOf(league, save.career.teamId).filter((x) => x.id !== p.id).map((x) => x.jersey));
-  while (taken.has(p.jersey)) p.jersey = (p.jersey + 1) % 100;
+  assignJersey(league, p);
   save.inbox.unshift(note(save, `twoway-${p.id}`, `${fullName(p)} signs a two-way deal`, `${years} season${years > 1 ? 's' : ''} at half the minimum. He splits time with the G League and does not take one of the 15 roster spots.`));
   return { ok: true, save, message: `${fullName(p)} signed a two-way contract.` };
 }

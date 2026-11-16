@@ -3,7 +3,7 @@
 // proven players now, rebuilding teams pay for youth, potential and picks.
 
 import { capStatus, marketSalary, salaryIn, teamPayroll } from './contracts';
-import { playerAge, playerOverall, rosterOf, teamSummaries } from './league';
+import { assignJersey, fixJerseys, playerAge, playerOverall, rosterOf, teamSummaries } from './league';
 import type { DraftPick, LeagueFile, Player } from './types';
 
 export type Strategy = 'contend' | 'middle' | 'rebuild';
@@ -171,12 +171,9 @@ export function executeTrade(league: LeagueFile, offer: TradeOffer) {
   movePicks(offer.give.picks, offer.toTeam);
   movePicks(offer.get.picks, offer.fromTeam);
   // A traded player keeps his number unless a teammate already wears it.
-  for (const team of [offer.fromTeam, offer.toTeam]) {
-    const taken = new Set<number>();
-    for (const p of league.players.filter((x) => x.teamId === team)) {
-      while (taken.has(p.jersey)) p.jersey = (p.jersey + 1) % 100;
-      taken.add(p.jersey);
-    }
+  for (const p of [...offer.give.players, ...offer.get.players]) {
+    const pl = league.players.find((x) => x.id === p);
+    if (pl) assignJersey(league, pl);
   }
 }
 
@@ -253,11 +250,5 @@ export function executeMultiTrade(league: LeagueFile, deal: MultiTrade) {
       if (k) k.ownerTeamId = m.to;
     }
   }
-  for (const team of deal.teams) {
-    const taken = new Set<number>();
-    for (const p of league.players.filter((x) => x.teamId === team)) {
-      while (taken.has(p.jersey)) p.jersey = (p.jersey + 1) % 100;
-      taken.add(p.jersey);
-    }
-  }
+  fixJerseys(league, deal.teams);
 }

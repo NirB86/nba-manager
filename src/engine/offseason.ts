@@ -5,7 +5,7 @@
 import { buildContract, projectedCba, rookieScaleSalary } from './contracts';
 import { PLAYER_REGIONS } from './data/names';
 import { pickName } from './generator';
-import { playerAge, playerOverall, rosterOf } from './league';
+import { assignJersey, playerAge, playerOverall, rosterOf } from './league';
 import { Rng, clamp } from './random';
 import { HEIGHT_CM, generateAttributes, overall, ATTRIBUTE_KEYS } from './ratings';
 import type { ScheduledGame } from './season';
@@ -123,8 +123,7 @@ export function signDraftedPlayer(league: LeagueFile, p: Player, slot: DraftSlot
     slot.round === 1
       ? buildContract(rng, cba, { firstSeason: year, signedSeason: year, firstYearSalary: rookieScaleSalary(cba, slot.pick), years: 4, kind: 'rookie' })
       : buildContract(rng, cba, { firstSeason: year, signedSeason: year, firstYearSalary: cba.minimumSalary, years: 2, kind: 'minimum' });
-  const taken = new Set(league.players.filter((x) => x.teamId === slot.teamId && x.id !== p.id).map((x) => x.jersey));
-  while (taken.has(p.jersey)) p.jersey = (p.jersey + 1) % 100;
+  assignJersey(league, p);
 }
 
 export interface DevelopmentChange {

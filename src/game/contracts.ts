@@ -2,7 +2,7 @@
 // signings of free agents. Each player has an asking price; an offer has a
 // chance of a yes, and a refusal comes with the player's counter offer.
 
-import { Rng, buildContract, capStatus, fullName, marketSalary, maxSalaryShare, playerAge, playerOverall, projectedCba, rosterOf, teamPayroll, teamStrategy, type Contract, type Player } from '../engine';
+import { Rng, assignJersey, buildContract, capStatus, fullName, marketSalary, maxSalaryShare, playerAge, playerOverall, projectedCba, rosterOf, teamPayroll, teamStrategy, type Contract, type Player } from '../engine';
 import { endHoldout } from './demands';
 import type { SaveGame } from '../storage/saves';
 import { morale } from './morale';
@@ -66,8 +66,10 @@ function askingSalary(save: SaveGame, p: Player, firstSeason: number): number {
   // Ego and loyalty move the price a little.
   const pers = p.personality;
   ask *= 1 + (pers.ego - 10) * 0.012 - (p.teamId === save.career.teamId ? (pers.loyalty - 10) * 0.01 : 0);
+  // Unsigned free agents come down the longer they wait, as they do for AI teams (to 60%; in-season, they take 60%).
+  if (!p.teamId) ask *= 1 - (save.offseason?.stage === 'free-agency' ? Math.min(0.4, save.offseason.faDay * 0.1) : save.offseason ? 0 : 0.4);
   const max = maxSalaryShare(p.experience + ahead) * cba.salaryCap;
-  return Math.round(Math.max(cba.minimumSalary, Math.min(max, ask)) / 10_000) * 10_000;
+  return Math.max(cba.minimumSalary, Math.round(Math.min(max, ask) / 10_000) * 10_000);
 }
 
 /** The "day" contract talks are counted by: game days, or free-agency days in the summer. */
@@ -228,8 +230,7 @@ function sign(original: SaveGame, playerId: string, n: Negotiation, offer: Offer
   } else {
     p.contract = { ...built, option, noTrade: false };
     p.teamId = me;
-    const taken = new Set(league.players.filter((x) => x.teamId === me && x.id !== p.id).map((x) => x.jersey));
-    while (taken.has(p.jersey)) p.jersey = (p.jersey + 1) % 100;
+    assignJersey(league, p);
     if (n.budget?.how === 'mid-level exception') save.season.mleUsed = true;
   }
   endHoldout(save, p.id);

@@ -112,7 +112,7 @@ export function weeklyMarket(save: SaveGame, rng: Rng) {
       const target = targets[rng.int(0, Math.min(3, targets.length - 1))]!;
       const deal = buildPackage(league, buyer, me, [target], rng, { sellerMin: -0.05, buyerMin: -0.2 });
       if (!deal) continue;
-      const offer: TradeOffer = { id: `offer-${season.day}-${buyer}`, fromTeam: buyer, deal, day: season.day, expiresDay: season.day + OFFER_DAYS, status: 'open' };
+      const offer: TradeOffer = { id: `offer-${league.meta.season}-${season.day}-${buyer}`, fromTeam: buyer, deal, day: season.day, expiresDay: season.day + OFFER_DAYS, status: 'open' };
       season.offers = [...(season.offers ?? []), offer];
       const get = deal.moves.filter((m) => m.to === me).map((m) => assetLabel(save, m));
       save.inbox.unshift({
